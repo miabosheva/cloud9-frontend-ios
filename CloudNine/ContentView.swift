@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  CloudNine
-//
-//  Created by Mia on 6/21/25.
-//
-
 import SwiftUI
 import SwiftData
 
