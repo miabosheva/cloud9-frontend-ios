@@ -6,8 +6,37 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0DBEF8172E081CC6009A33F8 /* CloudNineWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0DBEF8152E081CC6009A33F8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0DBEF7B92E06CF6C009A33F8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0DBEF80C2E081CC3009A33F8;
+			remoteInfo = "CloudNineWatch Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0DBEF8082E081BF7009A33F8 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				0DBEF8172E081CC6009A33F8 /* CloudNineWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudNine.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CloudNineWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +45,22 @@
 			path = CloudNine;
 			sourceTree = "<group>";
 		};
+		0DBEF80E2E081CC3009A33F8 /* CloudNineWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "CloudNineWatch Watch App";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0DBEF7BE2E06CF6C009A33F8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0DBEF80A2E081CC3009A33F8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				0DBEF7C32E06CF6C009A33F8 /* CloudNine */,
+				0DBEF80E2E081CC3009A33F8 /* CloudNineWatch Watch App */,
 				0DBEF7C22E06CF6C009A33F8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */,
+				0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -55,10 +98,12 @@
 				0DBEF7BD2E06CF6C009A33F8 /* Sources */,
 				0DBEF7BE2E06CF6C009A33F8 /* Frameworks */,
 				0DBEF7BF2E06CF6C009A33F8 /* Resources */,
+				0DBEF8082E081BF7009A33F8 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				0DBEF8162E081CC6009A33F8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0DBEF7C32E06CF6C009A33F8 /* CloudNine */,
@@ -68,6 +113,28 @@
 			);
 			productName = CloudNine;
 			productReference = 0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0DBEF80C2E081CC3009A33F8 /* CloudNineWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0DBEF8182E081CC6009A33F8 /* Build configuration list for PBXNativeTarget "CloudNineWatch Watch App" */;
+			buildPhases = (
+				0DBEF8092E081CC3009A33F8 /* Sources */,
+				0DBEF80A2E081CC3009A33F8 /* Frameworks */,
+				0DBEF80B2E081CC3009A33F8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0DBEF80E2E081CC3009A33F8 /* CloudNineWatch Watch App */,
+			);
+			name = "CloudNineWatch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "CloudNineWatch Watch App";
+			productReference = 0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -81,6 +148,9 @@
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					0DBEF7C02E06CF6C009A33F8 = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					0DBEF80C2E081CC3009A33F8 = {
 						CreatedOnToolsVersion = 16.3;
 					};
 				};
@@ -100,12 +170,20 @@
 			projectRoot = "";
 			targets = (
 				0DBEF7C02E06CF6C009A33F8 /* CloudNine */,
+				0DBEF80C2E081CC3009A33F8 /* CloudNineWatch Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		0DBEF7BF2E06CF6C009A33F8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0DBEF80B2E081CC3009A33F8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +200,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0DBEF8092E081CC3009A33F8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0DBEF8162E081CC6009A33F8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0DBEF80C2E081CC3009A33F8 /* CloudNineWatch Watch App */;
+			targetProxy = 0DBEF8152E081CC6009A33F8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0DBEF7CC2E06CF6E009A33F8 /* Debug */ = {
@@ -251,22 +344,27 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CloudNine/CloudNine.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 827YQ2VQ9C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Cloud9;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Your app needs access to your Heart Rate and Sleep Logs to visualize and measure stress levels.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Your app needs access to your Heart Rate and Sleep Logs to visualize and measure stress levels.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = miabosheva.com.CloudNine;
+				PRODUCT_BUNDLE_IDENTIFIER = miabosheva.com.Cloud9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -279,26 +377,89 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CloudNine/CloudNine.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 827YQ2VQ9C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Cloud9;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Your app needs access to your Heart Rate and Sleep Logs to visualize and measure stress levels.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Your app needs access to your Heart Rate and Sleep Logs to visualize and measure stress levels.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = miabosheva.com.CloudNine;
+				PRODUCT_BUNDLE_IDENTIFIER = miabosheva.com.Cloud9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0DBEF8192E081CC6009A33F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 827YQ2VQ9C;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = CloudNineWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = miabosheva.com.Cloud9;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = miabosheva.com.Cloud9.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.4;
+			};
+			name = Debug;
+		};
+		0DBEF81A2E081CC6009A33F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 827YQ2VQ9C;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = CloudNineWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = miabosheva.com.Cloud9;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = miabosheva.com.Cloud9.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.4;
 			};
 			name = Release;
 		};
@@ -319,6 +480,15 @@
 			buildConfigurations = (
 				0DBEF7CF2E06CF6E009A33F8 /* Debug */,
 				0DBEF7D02E06CF6E009A33F8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0DBEF8182E081CC6009A33F8 /* Build configuration list for PBXNativeTarget "CloudNineWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0DBEF8192E081CC6009A33F8 /* Debug */,
+				0DBEF81A2E081CC6009A33F8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
