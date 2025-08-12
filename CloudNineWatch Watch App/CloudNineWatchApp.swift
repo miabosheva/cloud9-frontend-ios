@@ -4,7 +4,7 @@ import SwiftUI
 struct CloudNineWatch_Watch_AppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            WatchContentView()
         }
     }
 }

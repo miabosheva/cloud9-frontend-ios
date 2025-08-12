@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0DB92F722E4BB1F9008481F2 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */; };
+		0DB92F742E4BB205008481F2 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F732E4BB205008481F2 /* WatchConnectivity.framework */; };
 		0DBEF8172E081CC6009A33F8 /* CloudNineWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -35,13 +37,28 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		0DB92F732E4BB205008481F2 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.4.sdk/System/Library/Frameworks/WatchConnectivity.framework; sourceTree = DEVELOPER_DIR; };
 		0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudNine.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CloudNineWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0DB92F6D2E4BB11A008481F2 /* Exceptions for "CloudNine" folder in "CloudNineWatch Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				SleepData.swift,
+			);
+			target = 0DBEF80C2E081CC3009A33F8 /* CloudNineWatch Watch App */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0DBEF7C32E06CF6C009A33F8 /* CloudNine */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0DB92F6D2E4BB11A008481F2 /* Exceptions for "CloudNine" folder in "CloudNineWatch Watch App" target */,
+			);
 			path = CloudNine;
 			sourceTree = "<group>";
 		};
@@ -57,6 +74,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0DB92F722E4BB1F9008481F2 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,17 +82,28 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0DB92F742E4BB205008481F2 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0DB92F702E4BB1F9008481F2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0DB92F732E4BB205008481F2 /* WatchConnectivity.framework */,
+				0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		0DBEF7B82E06CF6C009A33F8 = {
 			isa = PBXGroup;
 			children = (
 				0DBEF7C32E06CF6C009A33F8 /* CloudNine */,
 				0DBEF80E2E081CC3009A33F8 /* CloudNineWatch Watch App */,
+				0DB92F702E4BB1F9008481F2 /* Frameworks */,
 				0DBEF7C22E06CF6C009A33F8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -410,12 +439,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "CloudNineWatch Watch App/CloudNineWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 827YQ2VQ9C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "CloudNineWatch-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = CloudNineWatch;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to your heart rate data during workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app creates workout sessions to monitor your heart rate in real-time.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = miabosheva.com.Cloud9;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -430,7 +463,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 11.4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.3;
 			};
 			name = Debug;
 		};
@@ -439,12 +472,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "CloudNineWatch Watch App/CloudNineWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 827YQ2VQ9C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "CloudNineWatch-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = CloudNineWatch;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to your heart rate data during workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app creates workout sessions to monitor your heart rate in real-time.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = miabosheva.com.Cloud9;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -459,7 +496,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 11.4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.3;
 			};
 			name = Release;
 		};
