@@ -1,12 +1,12 @@
-// MARK: - iOS App - WatchConnector.swift
 import WatchConnectivity
 import Foundation
 
-class WatchConnector: NSObject, ObservableObject, WCSessionDelegate {
-    @Published var currentHeartRate: Double = 0.0
-    @Published var isWorkoutActive: Bool = false
-    @Published var isWatchConnected: Bool = false
-    @Published var statusMessage: String = ""
+@Observable
+class WatchConnector: NSObject, WCSessionDelegate {
+    var currentHeartRate: Double = 0.0
+    var isWorkoutActive: Bool = false
+    var isWatchConnected: Bool = false
+    var statusMessage: String = ""
     
     override init() {
         super.init()

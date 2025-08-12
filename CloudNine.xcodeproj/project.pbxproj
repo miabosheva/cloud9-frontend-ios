@@ -47,7 +47,7 @@
 		0DB92F6D2E4BB11A008481F2 /* Exceptions for "CloudNine" folder in "CloudNineWatch Watch App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				SleepData.swift,
+				Models/SleepData.swift,
 			);
 			target = 0DBEF80C2E081CC3009A33F8 /* CloudNineWatch Watch App */;
 		};

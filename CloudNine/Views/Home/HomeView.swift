@@ -3,11 +3,13 @@ import HealthKit
 import WatchConnectivity
 
 struct HomeView: View {
-    @StateObject private var healthManager = HealthManager()
-    @StateObject private var watchConnector = WatchConnector()
+    @Bindable var healthManager = HealthManager()
+    @Bindable var watchConnector = WatchConnector()
+    
+    @State private var showingAddSleep = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 20) {
                 // Heart Rate Section
                 VStack(alignment: .leading, spacing: 10) {
@@ -67,31 +69,6 @@ struct HomeView: View {
                 .background(Color.gray.opacity(0.1))
                 .cornerRadius(10)
                 
-                // Sleep Data Section
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Sleep Data (Last 7 Days)")
-                        .font(.headline)
-                        .foregroundColor(.blue)
-                    
-                    if healthManager.sleepData.isEmpty {
-                        Text("No sleep data available")
-                            .foregroundColor(.gray)
-                            .italic()
-                    } else {
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 8) {
-                                ForEach(healthManager.sleepData, id: \.date) { sleep in
-                                    SleepRowView(sleepData: sleep)
-                                }
-                            }
-                        }
-                        .frame(maxHeight: 300)
-                    }
-                }
-                .padding()
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(10)
-                
                 Spacer()
                 
                 // Status Messages
@@ -113,7 +90,6 @@ struct HomeView: View {
             .navigationTitle("Health Monitor")
             .onAppear {
                 healthManager.requestPermissions()
-                healthManager.loadSleepData()
                 watchConnector.activate()
             }
         }
