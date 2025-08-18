@@ -34,7 +34,7 @@ struct WatchContentView: View {
                 }
                 .foregroundColor(.red)
             } else {
-                Button("Start Workout") {
+                Button("Start Measuring") {
                     workoutManager.startWorkout()
                 }
                 .foregroundColor(.green)

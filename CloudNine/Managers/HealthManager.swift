@@ -239,7 +239,7 @@ class HealthManager: NSObject {
     
     // MARK: - Add Sleep Log
     
-    func addSleepLog(bedtime: Date, sleepTime: Date?, wakeTime: Date, outOfBedTime: Date?) async {
+    func addSleepLog(bedtime: Date, wakeTime: Date) async {
         do {
             guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
                 await MainActor.run {
@@ -250,22 +250,10 @@ class HealthManager: NSObject {
             
             var samplesToSave: [HKCategorySample] = []
             
-            // 1. In Bed period (from bedtime to out of bed time or wake time)
-            let inBedEnd = outOfBedTime ?? wakeTime
-            let inBedSample = HKCategorySample(
-                type: sleepType,
-                value: HKCategoryValueSleepAnalysis.inBed.rawValue,
-                start: bedtime,
-                end: inBedEnd
-            )
-            samplesToSave.append(inBedSample)
-            
-            // 2. Asleep period (from sleep time to wake time)
-            let asleepStart = sleepTime ?? bedtime
             let asleepSample = HKCategorySample(
                 type: sleepType,
                 value: HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
-                start: asleepStart,
+                start: bedtime,
                 end: wakeTime
             )
             samplesToSave.append(asleepSample)
@@ -273,7 +261,7 @@ class HealthManager: NSObject {
             // Save all samples
             try await saveSamples(samplesToSave)
             
-            let duration = wakeTime.timeIntervalSince(asleepStart)
+            let duration = wakeTime.timeIntervalSince(bedtime)
             let hours = Int(duration) / 3600
             let minutes = Int(duration) % 3600 / 60
             print("Sleep log saved successfully! Duration: \(hours)h \(minutes)m")

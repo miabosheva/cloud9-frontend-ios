@@ -54,7 +54,7 @@ class WorkoutManager: NSObject, ObservableObject {
             DispatchQueue.main.async {
                 self.running = success
                 if success {
-                    self.statusMessage = "Workout started"
+                    self.statusMessage = "Measuring started"
                     self.sendMessageToPhone(["workoutActive": true, "status": "Workout started"])
                 } else {
                     self.statusMessage = "Failed to start workout"

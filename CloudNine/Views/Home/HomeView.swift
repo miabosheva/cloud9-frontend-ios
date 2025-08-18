@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var heartRateFilter: TimeFilter = .today
     @State private var sleepFilter: TimeFilter = .today
     @State var showingInfoAlert: Bool = false
+    @State private var animate = false
     
     var body: some View {
         NavigationStack {
@@ -29,27 +30,27 @@ struct HomeView: View {
                     sleepLogsSection
                         .padding(.horizontal)
                     
-    //                // Status Messages
-    //                if !healthManager.statusMessage.isEmpty {
-    //                    Text(healthManager.statusMessage)
-    //                        .foregroundColor(healthManager.hasError ? .red : .green)
-    //                        .multilineTextAlignment(.center)
-    //                        .padding()
-    //                }
-    //
-    //                if !watchConnector.statusMessage.isEmpty {
-    //                    Text(watchConnector.statusMessage)
-    //                        .foregroundColor(.blue)
-    //                        .multilineTextAlignment(.center)
-    //                        .padding()
-    //                }
+                    //                // Status Messages
+                    //                if !healthManager.statusMessage.isEmpty {
+                    //                    Text(healthManager.statusMessage)
+                    //                        .foregroundColor(healthManager.hasError ? .red : .green)
+                    //                        .multilineTextAlignment(.center)
+                    //                        .padding()
+                    //                }
+                    //
+                    //                if !watchConnector.statusMessage.isEmpty {
+                    //                    Text(watchConnector.statusMessage)
+                    //                        .foregroundColor(.blue)
+                    //                        .multilineTextAlignment(.center)
+                    //                        .padding()
+                    //                }
                 }
             }
             .alert("Apple Watch Required", isPresented: $showingInfoAlert) {
-                        Button("OK", role: .cancel) { }
-                    } message: {
-                        Text("To begin a measurement, please open the app on your Apple Watch.")
-                    }
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("To begin a measurement, please open the app on your Apple Watch.")
+            }
             .onAppear {
                 setupView()
             }
@@ -99,8 +100,27 @@ struct HomeView: View {
                 
                 VStack(alignment: .center, spacing: 10) {
                     Image(systemName: "heart.fill")
-                        .font(.title2)
+                        .font(.title)
                         .foregroundColor(.red)
+                        .scaleEffect(animate ? 1.2 : 1.0)
+                        .animation(
+                            watchConnector.isWorkoutActive ?
+                            Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true)
+                            : .default,
+                            value: animate
+                        )
+                        .onAppear {
+                            if watchConnector.isWorkoutActive {
+                                animate = true
+                            }
+                        }
+                        .onChange(of: watchConnector.isWorkoutActive) { newValue in
+                            if newValue {
+                                animate = true
+                            } else {
+                                animate = false
+                            }
+                        }
                     
                     VStack(spacing: 2) {
                         Text("\(Int(watchConnector.currentHeartRate))")
@@ -183,7 +203,7 @@ struct HomeView: View {
         }
         .padding(.top)
     }
-
+    
     private var sleepLogsSection: some View {
         VStack(alignment: .leading, spacing: 15) {
             // Section Header
@@ -236,7 +256,7 @@ struct HomeView: View {
         .cornerRadius(15)
         .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
-
+    
     private var heartRateSection: some View {
         VStack(alignment: .leading, spacing: 15) {
             // Section Header

@@ -154,9 +154,7 @@ struct AddSleepLogView: View {
         Task {
             await healthManager.addSleepLog(
                 bedtime: combinedBedtime,
-                sleepTime: nil,
-                wakeTime: combinedWakeTime,
-                outOfBedTime: nil
+                wakeTime: combinedWakeTime
             )
             dismiss()
             await healthManager.loadSleepChartData(for: .thisMonth)
