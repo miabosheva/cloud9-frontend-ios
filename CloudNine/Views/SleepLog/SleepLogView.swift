@@ -17,7 +17,9 @@ struct SleepLogView: View {
                     Spacer()
                     
                     Button("Refresh") {
-                        healthManager.loadSleepData()
+                        Task {
+                            await healthManager.loadSleepChartData(for: .today)
+                        }
                     }
                     .font(.caption)
                     .padding(6)
@@ -38,7 +40,9 @@ struct SleepLogView: View {
                                 SleepLogRowView(
                                     sleepData: sleep,
                                     onDelete: {
-                                        healthManager.deleteSleepSession(sleep)
+                                        Task {
+                                            await healthManager.deleteSleepSession(sleep)
+                                        }
                                     }
                                 )
                             }
@@ -49,7 +53,9 @@ struct SleepLogView: View {
             .padding()
             .cornerRadius(10)
             .onAppear {
-                healthManager.loadSleepData()
+                Task {
+                    await healthManager.loadSleepChartData(for: .today)
+                }
             }
             .sheet(isPresented: $showingAddSleep) {
                 AddSleepLogView(healthManager: healthManager)
