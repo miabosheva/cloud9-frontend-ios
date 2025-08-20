@@ -2,7 +2,6 @@ import SwiftUI
 import HealthKit
 import Charts
 
-// MARK: - Supporting Views
 struct MetricCard: View {
     let title: String
     let value: String
