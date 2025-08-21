@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AddSleepLogView: View {
-    @Bindable var healthManager: HealthManager
+    @Environment(HealthManager.self) var healthManager
     @Environment(\.dismiss) var dismiss
     
     @State private var sleepDate = Date()
@@ -157,7 +157,7 @@ struct AddSleepLogView: View {
                 wakeTime: combinedWakeTime
             )
             dismiss()
-            await healthManager.loadSleepChartData(for: .thisMonth)
+            await healthManager.loadSleepData()
         }
     }
 }

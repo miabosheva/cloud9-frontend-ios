@@ -4,13 +4,13 @@ import HealthKit
 import WatchConnectivity
 
 struct HomeView: View {
-    @Bindable var healthManager = HealthManager()
+    @Environment(HealthManager.self) var healthManager
     @Bindable var watchConnector = WatchConnector()
     
     @State private var showingAddSleep = false
     
-    @State private var heartRateFilter: TimeFilter = .today
-    @State private var sleepFilter: TimeFilter = .today
+    @State private var heartRateFilter: HeartFilter = .today
+    @State private var sleepFilter: SleepFilter = .thisWeek
     @State var showingInfoAlert: Bool = false
     @State private var animate = false
     
@@ -19,8 +19,29 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     
-                    headerView
-                        .padding(.horizontal)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Welcome")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            Text("John Doe")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            // TODO: - User Profile
+                        }) {
+                            Image(systemName: "person.circle")
+                                .font(.title)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.top)
+                    .padding(.horizontal)
                     
                     healthMetricsView
                     
@@ -29,21 +50,6 @@ struct HomeView: View {
                     
                     sleepLogsSection
                         .padding(.horizontal)
-                    
-                    //                // Status Messages
-                    //                if !healthManager.statusMessage.isEmpty {
-                    //                    Text(healthManager.statusMessage)
-                    //                        .foregroundColor(healthManager.hasError ? .red : .green)
-                    //                        .multilineTextAlignment(.center)
-                    //                        .padding()
-                    //                }
-                    //
-                    //                if !watchConnector.statusMessage.isEmpty {
-                    //                    Text(watchConnector.statusMessage)
-                    //                        .foregroundColor(.blue)
-                    //                        .multilineTextAlignment(.center)
-                    //                        .padding()
-                    //                }
                 }
             }
             .alert("Apple Watch Required", isPresented: $showingInfoAlert) {
@@ -51,20 +57,18 @@ struct HomeView: View {
             } message: {
                 Text("To begin a measurement, please open the app on your Apple Watch.")
             }
-            .onAppear {
-                setupView()
+            .task {
+                await setupView()
             }
             .navigationBarHidden(true)
             .background(Color(.systemGray6))
         }
     }
     
-    private func setupView() {
-        Task {
-            await healthManager.requestPermissions()
-            watchConnector.activate()
-            await healthManager.loadInitialData()
-        }
+    private func setupView() async {
+        await healthManager.requestPermissions()
+        watchConnector.activate()
+        await healthManager.loadInitialData()
     }
     
     private var healthMetricsView: some View {
@@ -114,7 +118,7 @@ struct HomeView: View {
                                 animate = true
                             }
                         }
-                        .onChange(of: watchConnector.isWorkoutActive) { newValue in
+                        .onChange(of: watchConnector.isWorkoutActive) { _, newValue in
                             if newValue {
                                 animate = true
                             } else {
@@ -179,31 +183,6 @@ struct HomeView: View {
         .padding(.leading, 16)
     }
     
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text("Welcome")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Text("John Doe")
-                    .font(.title2)
-                    .fontWeight(.bold)
-            }
-            
-            Spacer()
-            
-            Button(action: {
-                // TODO: - User Profile
-            }) {
-                Image(systemName: "person.circle")
-                    .font(.title)
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding(.top)
-    }
-    
     private var sleepLogsSection: some View {
         VStack(alignment: .leading, spacing: 15) {
             // Section Header
@@ -216,12 +195,10 @@ struct HomeView: View {
             }
             
             // Filter Buttons
-            FilterButtonsView(
+            SleepFilterButtonsView(
                 selectedFilter: $sleepFilter,
                 onFilterChange: { filter in
-                    Task {
-                        await healthManager.loadSleepChartData(for: filter)
-                    }
+                    healthManager.loadSleepSamplesForChart(filter: sleepFilter)
                 }
             )
             
@@ -242,9 +219,19 @@ struct HomeView: View {
                         y: .value("Hours", data.duration)
                     )
                     .foregroundStyle(data.quality == "Good" ? Color.blue : data.quality == "Fair" ? Color.orange : Color.red)
+                    
+                    // TODO: - Change with optimal value
+                    RuleMark(y: .value("Target", 8))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
+                        .foregroundStyle(Color.gray)
+                        .annotation(position: .top, alignment: .leading) {
+                            Text("8 Hours")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
                 }
                 .frame(height: 150)
-                .chartYScale(domain: 0...10)
+                .chartYScale(domain: 0...15)
             } else {
                 // Fallback chart
                 SimpleBarChartView(data: healthManager.sleepData.map { $0.duration })
@@ -269,7 +256,7 @@ struct HomeView: View {
             }
             
             // Filter Buttons
-            FilterButtonsView(
+            HeartFilterButtonsView(
                 selectedFilter: $heartRateFilter,
                 onFilterChange: { filter in
                     Task {
@@ -289,18 +276,29 @@ struct HomeView: View {
             
             // Heart Rate Chart
             if #available(iOS 16.0, *) {
-                Chart(healthManager.heartRateChartData) { data in
-                    BarMark(
-                        x: .value("Time", data.timestamp),
-                        y: .value("Heart Rate", data.heartRate)
-                    )
-                    .foregroundStyle(Color.blue.opacity(0.7))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    Chart(healthManager.heartRateData) { data in
+                        BarMark(
+                            x: .value("Time", data.timestamp),
+                            y: .value("Heart Rate", data.heartRate)
+                        )
+                        
+                        // TODO: - Change with average value
+                        RuleMark(y: .value("Average", 80))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [5]))
+                            .foregroundStyle(Color.gray)
+                            .annotation(position: .top, alignment: .leading) {
+                                Text("Average")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                    }
+                    .frame(width: CGFloat(healthManager.heartRateData.count) * 60, height: 200)
+                    .chartYScale(domain: 0...120)
                 }
-                .frame(height: 200)
-                .chartYScale(domain: 50...120)
             } else {
                 // Fallback chart for older iOS versions
-                SimpleBarChartView(data: healthManager.heartRateChartData.map { $0.heartRate })
+                SimpleBarChartView(data: healthManager.heartRateData.map { $0.heartRate })
                     .frame(height: 200)
             }
         }

@@ -3,22 +3,23 @@ import HealthKit
 
 struct MainTabView: View {
     
-    @Bindable private var healthManager = HealthManager()
-    @Bindable private var watchConnector = WatchConnector()
+    @State private var healthManager = HealthManager()
+    @State private var watchConnector = WatchConnector()
     
     var body: some View {
         Group {
             TabView {
-                HomeView(healthManager: healthManager, watchConnector: watchConnector)
+                HomeView(watchConnector: watchConnector)
                     .tabItem {
                         Label("Home", systemImage: "house.fill")
                     }
                 
-                SleepLogView(healthManager: healthManager)
+                SleepLogView()
                     .tabItem {
                         Label("Sleep Log", systemImage: "moon.stars.fill")
                     }
             }
+            .environment(healthManager)
         }
     }
 }

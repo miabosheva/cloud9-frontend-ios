@@ -24,15 +24,18 @@ enum HealthError: Error {
     }
 }
 
+@MainActor
 @Observable
 class HealthManager: NSObject {
+    
     @ObservationIgnored private let healthStore = HKHealthStore()
     
     var sleepChartData: [SleepChartData] = []
-    var heartRateChartData: [HeartRateData] = []
-    var sleepData: [SleepData] = []
-    var error: Error?
     
+    var heartRateData: [HeartRateData] = []
+    var sleepData: [SleepData] = []
+    
+    var error: Error?
     private var samplesBySessionId: [String: [HKCategorySample]] = [:]
     
     func requestPermissions() async {
@@ -65,35 +68,67 @@ class HealthManager: NSObject {
     
     func loadInitialData() async {
         await loadHeartRateData(for: .today)
-        await loadSleepChartData(for: .today)
         await loadSleepData()
+        loadSleepSamplesForChart(filter: .thisWeek)
     }
     
     // MARK: - Heart Rate Data Loading
-    
-    func loadHeartRateData(for filter: TimeFilter) async {
+    //    For .today and .yesterday: Average per hour.
+    //    For .thisWeek and .thisMonth: Average per day.
+    func loadHeartRateData(for filter: HeartFilter) async {
         do {
             let heartRateSamples = try await fetchHeartRateSamples(for: filter)
-            let data = heartRateSamples.map { sample in
-                HeartRateData(
-                    date: sample.startDate,
-                    heartRate: sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute())),
-                    timestamp: formatTimestamp(sample.startDate, for: filter)
-                )
+            let calendar = Calendar.current
+            
+            if heartRateSamples.count < 20 {
+                let data =  heartRateSamples.map { sample in
+                    HeartRateData(
+                        date: sample.startDate,
+                        heartRate: sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute())),
+                        timestamp: formatTimestamp(sample.startDate, for: filter))
+                }.sorted { $0.date < $1.date }
+                
+                self.heartRateData = data
+                return
             }
             
-            await MainActor.run {
-                self.heartRateChartData = data.isEmpty ? generateMockHeartRateData(for: filter) : data
+            // Group samples based on the filter
+            let groupedSamples: [Date: [HKQuantitySample]] = Dictionary(grouping: heartRateSamples) { sample in
+                switch filter {
+                case .today, .yesterday:
+                    // Group by hour
+                    return calendar.dateInterval(of: .hour, for: sample.startDate)?.start ?? sample.startDate
+                case .thisWeek, .thisMonth:
+                    // Group by day
+                    return calendar.startOfDay(for: sample.startDate)
+                }
             }
+            
+            // Map each group to average HeartRateData
+            let aggregatedData: [HeartRateData] = groupedSamples.map { (groupDate, samples) in
+                let heartRate = samples
+                        .map { $0.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute())) }
+                        .reduce(0, +) / Double(samples.count)
+                
+                return HeartRateData(
+                    date: groupDate,
+                    heartRate: heartRate,
+                    timestamp: formatTimestamp(groupDate, for: filter)
+                )
+            }.sorted { $0.date < $1.date }
+            
+            self.heartRateData = aggregatedData
+            
         } catch {
-            await MainActor.run {
-                self.heartRateChartData = generateMockHeartRateData(for: filter)
-                print("Failed to load heart rate data: \(error.localizedDescription)")
-            }
+            //            await MainActor.run {
+            //                self.heartRateChartData = generateMockHeartRateData(for: filter)
+            //                print("Failed to load heart rate data: \(error.localizedDescription)")
+            //            }
+            print(error.localizedDescription)
         }
     }
     
-    private func fetchHeartRateSamples(for filter: TimeFilter) async throws -> [HKQuantitySample] {
+    private func fetchHeartRateSamples(for filter: HeartFilter) async throws -> [HKQuantitySample] {
         guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
             throw HealthError.failedToCreateType
         }
@@ -128,76 +163,41 @@ class HealthManager: NSObject {
     }
     
     // MARK: - Sleep Data Loading (for list view)
-    
     func loadSleepData() async {
         do {
             let sleepSamples = try await fetchSleepSamples(last30Days: true)
-            let processedData = processSleepSamples(sleepSamples)
+            // load sleep data
+            sleepData = processSleepSamples(sleepSamples)
             
-            await MainActor.run {
-                self.sleepData = processedData
-                print("Loaded \(processedData.count) sleep log\(processedData.count == 1 ? "" : "s")")
-            }
+            print("Loaded \(sleepData.count) sleep logs")
         } catch {
-            await MainActor.run {
-                self.error = error
-                print("Failed to load sleep data: \(error.localizedDescription)")
-            }
+            self.error = error
+            print("Failed to load sleep data: \(error.localizedDescription)")
         }
     }
     
-    // MARK: - Sleep Chart Data Loading
-    
-    func loadSleepChartData(for filter: TimeFilter) async {
-        do {
-            let sleepSamples = try await fetchSleepSamples(for: filter)
-            let processedData = processSleepSamplesForChart(sleepSamples, for: filter)
-            
-            await MainActor.run {
-                self.sleepChartData = processedData
-            }
-        } catch {
-            await MainActor.run {
-                self.sleepChartData = []
-                print("Failed to load sleep chart data: \(error.localizedDescription)")
-            }
-        }
+    func loadSleepSamplesForChart(filter: SleepFilter) {
+        sleepChartData = processSleepChartData(sleepData, for: filter)
     }
     
-    // MARK: - Sleep Sample Fetching
-    
-    private func fetchSleepSamples(for filter: TimeFilter) async throws -> [HKCategorySample] {
-        guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
-            throw HealthError.failedToCreateType
+    func processSleepChartData(_ sleepData: [SleepData], for filter: SleepFilter) -> [SleepChartData] {
+        let calendar = Calendar.current
+        var sleepByDay: [Date: Double] = [:]
+        
+        for sample in sleepData {
+            let day = calendar.startOfDay(for: sample.date)
+            let duration = sample.wakeTime.timeIntervalSince(sample.bedtime) / 3600 // Convert to hours
+            sleepByDay[day, default: 0] += duration
         }
         
-        let (startDate, endDate) = dateRange(for: filter)
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [sortDescriptor]
-            ) { _, samples, error in
-                
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                
-                guard let sleepSamples = samples as? [HKCategorySample] else {
-                    continuation.resume(throwing: HealthError.noSamplesFound)
-                    return
-                }
-                
-                continuation.resume(returning: sleepSamples)
-            }
-            
-            healthStore.execute(query)
-        }
+        return sleepByDay.map { date, duration in
+            SleepChartData(
+                date: date,
+                duration: duration,
+                quality: duration >= 7 ? "Good" : duration >= 6 ? "Fair" : "Poor",
+                timestamp: formatTimestamp(date, for: filter)
+            )
+        }.sorted { $0.date < $1.date }
     }
     
     private func fetchSleepSamples(last30Days: Bool) async throws -> [HKCategorySample] {
@@ -238,7 +238,6 @@ class HealthManager: NSObject {
     }
     
     // MARK: - Add Sleep Log
-    
     func addSleepLog(bedtime: Date, wakeTime: Date) async {
         do {
             guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
@@ -267,7 +266,6 @@ class HealthManager: NSObject {
             print("Sleep log saved successfully! Duration: \(hours)h \(minutes)m")
             
             // Reload data to reflect changes
-            await loadSleepChartData(for: .today)
             await loadSleepData()
         } catch {
             await MainActor.run {
@@ -289,7 +287,6 @@ class HealthManager: NSObject {
     }
     
     // MARK: - Delete Sleep Session
-    
     func deleteSleepSession(_ sleepData: SleepData) async {
         do {
             guard let samplesToDelete = samplesBySessionId[sleepData.sessionId] else {
@@ -315,7 +312,7 @@ class HealthManager: NSObject {
             }
             
             // Reload data to reflect changes
-            await loadSleepChartData(for: .today)
+            await loadSleepData()
         } catch {
             await MainActor.run {
                 self.error = error
@@ -338,7 +335,7 @@ class HealthManager: NSObject {
 
 // MARK: - Helper Methods
 extension HealthManager {
-    private func dateRange(for filter: TimeFilter) -> (Date, Date) {
+    private func dateRange(for filter: HeartFilter) -> (Date, Date) {
         let calendar = Calendar.current
         let now = Date()
         
@@ -346,6 +343,11 @@ extension HealthManager {
         case .today:
             let startOfDay = calendar.startOfDay(for: now)
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            return (startOfDay, endOfDay)
+        case .yesterday:
+            let today = calendar.startOfDay(for: now)
+            let startOfDay = calendar.date(byAdding: .day, value: -1, to: today)!
+            let endOfDay = today
             return (startOfDay, endOfDay)
         case .thisWeek:
             let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
@@ -358,11 +360,40 @@ extension HealthManager {
         }
     }
     
-    private func formatTimestamp(_ date: Date, for filter: TimeFilter) -> String {
+    private func dateRange(for filter: SleepFilter) -> (Date, Date) {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        switch filter {
+        case .thisWeek:
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+            let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek)!
+            return (startOfWeek, endOfWeek)
+        case .thisMonth:
+            let startOfMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
+            let endOfMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)!
+            return (startOfMonth, endOfMonth)
+        }
+    }
+    
+    private func formatTimestamp(_ date: Date, for filter: HeartFilter) -> String {
         let formatter = DateFormatter()
         switch filter {
         case .today:
             formatter.dateFormat = "HH:mm"
+        case .yesterday:
+            formatter.dateFormat = "HH:mm"
+        case .thisWeek:
+            formatter.dateFormat = "EEE"
+        case .thisMonth:
+            formatter.dateFormat = "MMM d"
+        }
+        return formatter.string(from: date)
+    }
+    
+    private func formatTimestamp(_ date: Date, for filter: SleepFilter) -> String {
+        let formatter = DateFormatter()
+        switch filter {
         case .thisWeek:
             formatter.dateFormat = "EEE"
         case .thisMonth:
@@ -446,71 +477,32 @@ extension HealthManager {
         return result.sorted { $0.date > $1.date }
     }
     
-    private func processSleepSamplesForChart(_ samples: [HKCategorySample], for filter: TimeFilter) -> [SleepChartData] {
-        let calendar = Calendar.current
-        var sleepByDay: [Date: Double] = [:]
-        
-        // Only process asleep samples for chart data
-        let asleepSamples = samples.filter {
-            $0.value == HKCategoryValueSleepAnalysis.asleep.rawValue ||
-            $0.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue ||
-            $0.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
-            $0.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
-            $0.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue
-        }
-        
-        for sample in asleepSamples {
-            let day = calendar.startOfDay(for: sample.startDate)
-            let duration = sample.endDate.timeIntervalSince(sample.startDate) / 3600 // Convert to hours
-            sleepByDay[day, default: 0] += duration
-        }
-        
-        return sleepByDay.map { date, duration in
-            SleepChartData(
-                date: date,
-                duration: duration,
-                quality: duration >= 7 ? "Good" : duration >= 6 ? "Fair" : "Poor",
-                timestamp: formatTimestamp(date, for: filter)
-            )
-        }.sorted { $0.date < $1.date }
-    }
-    
-    // Mock data generation for demo purposes
-    private func generateMockHeartRateData(for filter: TimeFilter) -> [HeartRateData] {
-        let calendar = Calendar.current
-        let now = Date()
-        var data: [HeartRateData] = []
-        
-        switch filter {
-        case .today:
-            for hour in stride(from: 0, to: 24, by: 2) {
-                let date = calendar.date(byAdding: .hour, value: -23 + hour, to: now)!
-                data.append(HeartRateData(
-                    date: date,
-                    heartRate: Double.random(in: 60...100),
-                    timestamp: formatTimestamp(date, for: filter)
-                ))
-            }
-        case .thisWeek:
-            for day in 0..<7 {
-                let date = calendar.date(byAdding: .day, value: -6 + day, to: now)!
-                data.append(HeartRateData(
-                    date: date,
-                    heartRate: Double.random(in: 65...95),
-                    timestamp: formatTimestamp(date, for: filter)
-                ))
-            }
-        case .thisMonth:
-            for day in stride(from: 0, to: 30, by: 2) {
-                let date = calendar.date(byAdding: .day, value: -29 + day, to: now)!
-                data.append(HeartRateData(
-                    date: date,
-                    heartRate: Double.random(in: 65...95),
-                    timestamp: formatTimestamp(date, for: filter)
-                ))
-            }
-        }
-        
-        return data
-    }
+    //    private func processSleepSamplesForChart(_ samples: [HKCategorySample], for filter: TimeFilter) -> [SleepChartData] {
+    //        let calendar = Calendar.current
+    //        var sleepByDay: [Date: Double] = [:]
+    //
+    //        // Only process asleep samples for chart data
+    //        let asleepSamples = samples.filter {
+    //            $0.value == HKCategoryValueSleepAnalysis.asleep.rawValue ||
+    //            $0.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue ||
+    //            $0.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
+    //            $0.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
+    //            $0.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue
+    //        }
+    //
+    //        for sample in asleepSamples {
+    //            let day = calendar.startOfDay(for: sample.startDate)
+    //            let duration = sample.endDate.timeIntervalSince(sample.startDate) / 3600 // Convert to hours
+    //            sleepByDay[day, default: 0] += duration
+    //        }
+    //
+    //        return sleepByDay.map { date, duration in
+    //            SleepChartData(
+    //                date: date,
+    //                duration: duration,
+    //                quality: duration >= 7 ? "Good" : duration >= 6 ? "Fair" : "Poor",
+    //                timestamp: formatTimestamp(date, for: filter)
+    //            )
+    //        }.sorted { $0.date < $1.date }
+    //    }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SleepLogView: View {
     
-    @Bindable var healthManager = HealthManager()
+    @Environment(HealthManager.self) var healthManager
     @State private var showingAddSleep = false
     
     var body: some View {
@@ -18,7 +18,7 @@ struct SleepLogView: View {
                     
                     Button("Refresh") {
                         Task {
-                            await healthManager.loadSleepChartData(for: .today)
+                            await healthManager.loadSleepData()
                         }
                     }
                     .font(.caption)
@@ -54,11 +54,11 @@ struct SleepLogView: View {
             .cornerRadius(10)
             .onAppear {
                 Task {
-                    await healthManager.loadSleepChartData(for: .today)
+                    await healthManager.loadSleepData()
                 }
             }
             .sheet(isPresented: $showingAddSleep) {
-                AddSleepLogView(healthManager: healthManager)
+                AddSleepLogView()
             }
             .toolbar {
                 ToolbarItem {
@@ -82,4 +82,5 @@ struct SleepLogView: View {
 
 #Preview {
     SleepLogView()
+        .environment(HealthManager())
 }
