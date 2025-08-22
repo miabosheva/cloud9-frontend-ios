@@ -7,6 +7,8 @@ struct AddSleepLogView: View {
     @State private var sleepDate = Date()
     @State private var bedtime = Date()
     @State private var wakeTime = Date()
+    @State private var sleepQuality: SleepQuality = .fair
+    @State private var description: String = ""
     
     @State private var includeSleepTime = true
     @State private var includeOutOfBedTime = true
@@ -27,7 +29,17 @@ struct AddSleepLogView: View {
                     DatePicker("Wake Time", selection: $wakeTime, displayedComponents: .hourAndMinute)
                 }
                 
-                Section(header: Text("Sleep Quality")) {
+                Section("Quality and Description") {
+                    Picker("Sleep Quality", selection: $sleepQuality) {
+                        ForEach(SleepQuality.allCases, id: \.self) { quality in
+                            Text(quality.rawValue).tag(quality)
+                        }
+                    }
+                    
+                    TextField("Describe your sleep...", text: $description)
+                }
+                
+                Section(header: Text("Summary")) {
                     Text("Duration: \(formatSleepDuration())")
                         .foregroundColor(.secondary)
                     

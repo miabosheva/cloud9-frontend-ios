@@ -47,13 +47,15 @@ struct SleepLogRowView: View {
                     
                     Spacer()
                     
-                    Text(sleepData.sleepQuality)
-                        .font(.caption2)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(sleepData.qualityColor.opacity(0.2))
-                        .foregroundColor(sleepData.qualityColor)
-                        .cornerRadius(4)
+                    if let sleepQuality = sleepData.quality {
+                        Text(sleepQuality.rawValue)
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(sleepData.qualityColor.opacity(0.2))
+                            .foregroundColor(sleepData.qualityColor)
+                            .cornerRadius(4)
+                    }
                 }
             }
             
