@@ -14,6 +14,7 @@ struct SleepData {
     let sessionId: String
     var quality: SleepQuality?
     var description: String?
+    var savedFlag: Bool = false
     
     var formattedDuration: String {
         let hours = Int(duration) / 3600

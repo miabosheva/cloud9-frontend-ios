@@ -3,6 +3,7 @@ import SwiftUI
 struct SleepLogRowView: View {
     let sleepData: SleepData
     let onDelete: () -> Void
+    let onSave: () -> Void
     
     @State var showDeleteAlert: Bool = false
     
@@ -59,17 +60,29 @@ struct SleepLogRowView: View {
                 }
             }
             
-            Button(action: {
-                showDeleteAlert = true
-            }) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
-                    .font(.caption)
+            if sleepData.savedFlag {
+                Button(action: {
+                    showDeleteAlert = true
+                }) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                        .font(.caption)
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                Button(action: {
+                    onSave()
+                }) {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.white)
+                        .font(.caption)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
-            .buttonStyle(PlainButtonStyle())
+            
         }
         .padding()
-        .background(Color.white.opacity(0.8))
+        .background(sleepData.savedFlag ? .green : Color.white.opacity(0.8))
         .cornerRadius(10)
         .shadow(radius: 1)
         .alert("Delete Sleep Log", isPresented: $showDeleteAlert) {

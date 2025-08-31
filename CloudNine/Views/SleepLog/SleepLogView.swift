@@ -26,6 +26,11 @@ struct SleepLogView: View {
                                             Task {
                                                 await healthManager.deleteSleepSession(sleep)
                                             }
+                                        },
+                                        onSave: {
+                                            Task {
+                                                await healthManager.addSleepLog(bedtime: sleep.bedtime, wakeTime: sleep.wakeTime)
+                                            }
                                         }
                                     )
                                 }

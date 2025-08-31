@@ -71,7 +71,6 @@ class HealthManager: NSObject {
     func loadInitialData() async {
         await loadHeartRateData(for: .today)
         await loadSleepData()
-        print(sleepData)
         loadSleepSamplesForChart(filter: .thisWeek)
     }
     
@@ -209,7 +208,8 @@ class HealthManager: NSObject {
                     bedtime: bedtime,
                     wakeTime: wakeTime,
                     duration: wakeTime.timeIntervalSince(bedtime),
-                    sessionId: "planned-\(startOfDay.timeIntervalSince1970)"
+                    sessionId: "planned-\(startOfDay.timeIntervalSince1970)",
+                    savedFlag: false
                 )
                 result.append(planned)
             }
@@ -537,7 +537,8 @@ extension HealthManager {
                     bedtime: earliestStart,
                     wakeTime: latestEnd,
                     duration: totalSleepDuration,
-                    sessionId: sessionId
+                    sessionId: sessionId,
+                    savedFlag: true
                 )
                 
                 result.append(sleepData)
