@@ -5,6 +5,7 @@ import WatchConnectivity
 
 struct HomeView: View {
     @Environment(HealthManager.self) var healthManager
+    @State var navigationManager = NavigationManager()
     @Bindable var watchConnector = WatchConnector()
     
     @State private var showingAddSleep = false
@@ -15,7 +16,8 @@ struct HomeView: View {
     @State private var animate = false
     
     var body: some View {
-        NavigationStack {
+        
+        NavigationStack(path: $navigationManager.path) {
             ScrollView {
                 VStack(spacing: 20) {
                     
@@ -33,7 +35,7 @@ struct HomeView: View {
                         Spacer()
                         
                         Button(action: {
-                            // TODO: - User Profile
+                            navigationManager.navigate(to: .profile)
                         }) {
                             Image(systemName: "person.circle")
                                 .font(.title)
@@ -62,6 +64,7 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .background(Color(.systemGray6))
+            .customNavigation()
         }
     }
     

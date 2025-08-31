@@ -50,6 +50,7 @@
 				Models/HeartRateData.swift,
 				Models/SleepChartData.swift,
 				Models/SleepData.swift,
+				Models/UserInfo.swift,
 			);
 			target = 0DBEF80C2E081CC3009A33F8 /* CloudNineWatch Watch App */;
 		};

@@ -35,6 +35,8 @@ class HealthManager: NSObject {
     var heartRateData: [HeartRateData] = []
     var sleepData: [SleepData] = []
     
+    var userInfo = UserInfo()
+    
     var error: Error?
     private var samplesBySessionId: [String: [HKCategorySample]] = [:]
     
@@ -107,8 +109,8 @@ class HealthManager: NSObject {
             // Map each group to average HeartRateData
             let aggregatedData: [HeartRateData] = groupedSamples.map { (groupDate, samples) in
                 let heartRate = samples
-                        .map { $0.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute())) }
-                        .reduce(0, +) / Double(samples.count)
+                    .map { $0.quantity.doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute())) }
+                    .reduce(0, +) / Double(samples.count)
                 
                 return HeartRateData(
                     date: groupDate,
@@ -169,10 +171,76 @@ class HealthManager: NSObject {
             // load sleep data
             sleepData = processSleepSamples(sleepSamples)
             
+            // Fill missing days with schedule (planned bedtime/wake)
+            let filled = try await fillMissingDaysWithSchedule(sleepData)
+            
+            sleepData = filled
             print("Loaded \(sleepData.count) sleep logs")
         } catch {
             self.error = error
             print("Failed to load sleep data: \(error.localizedDescription)")
+        }
+    }
+    
+    private func fillMissingDaysWithSchedule(_ logs: [SleepData]) async throws -> [SleepData] {
+        var result = logs
+        let calendar = Calendar.current
+        let endDate = Date()
+        let startDate = calendar.date(byAdding: .day, value: -30, to: endDate)!
+        
+        // Turn existing logs into a lookup
+        let existingDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
+        
+        // Iterate through all 30 days
+        for offset in 0..<30 {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: endDate) else { continue }
+            let startOfDay = calendar.startOfDay(for: day)
+            
+            if !existingDays.contains(startOfDay) {
+                if let planned = try await fetchPlannedSleep(for: startOfDay) {
+                    result.append(planned)
+                }
+            }
+        }
+        
+        return result.sorted { $0.date < $1.date }
+    }
+    
+    private func fetchPlannedSleep(for date: Date) async throws -> SleepData? {
+        guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
+
+        let start = Calendar.current.startOfDay(for: date)
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
+
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<SleepData?, Error>) in
+            let query = HKSampleQuery(
+                sampleType: sleepType,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+            ) { _, samples, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                let sleepDataNilPlaceholder: SleepData? = nil
+                guard let scheduleSample = (samples as? [HKCategorySample])?.first else {
+                    continuation.resume(returning: sleepDataNilPlaceholder)
+                    return
+                }
+
+                continuation.resume(returning: SleepData(
+                    date: start,
+                    bedtime: scheduleSample.startDate,
+                    wakeTime: scheduleSample.endDate,
+                    duration: scheduleSample.endDate.timeIntervalSince(scheduleSample.startDate) / 3600,
+                    sessionId: "planned-\(start.timeIntervalSince1970)"
+                ))
+            }
+
+            healthStore.execute(query)
         }
     }
     
