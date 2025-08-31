@@ -71,6 +71,7 @@ class HealthManager: NSObject {
     func loadInitialData() async {
         await loadHeartRateData(for: .today)
         await loadSleepData()
+        print(sleepData)
         loadSleepSamplesForChart(filter: .thisWeek)
     }
     
@@ -172,7 +173,7 @@ class HealthManager: NSObject {
             sleepData = processSleepSamples(sleepSamples)
             
             // Fill missing days with schedule (planned bedtime/wake)
-            let filled = try await fillMissingDaysWithSchedule(sleepData)
+            let filled = fillMissingDaysWithSchedule(sleepData)
             
             sleepData = filled
             print("Loaded \(sleepData.count) sleep logs")
@@ -182,80 +183,80 @@ class HealthManager: NSObject {
         }
     }
     
-    private func fillMissingDaysWithSchedule(_ logs: [SleepData]) async throws -> [SleepData] {
+    private func fillMissingDaysWithSchedule(_ logs: [SleepData]) -> [SleepData] {
         var result = logs
         let calendar = Calendar.current
         let endDate = Date()
-        let startDate = calendar.date(byAdding: .day, value: -30, to: endDate)!
-        
-        // Turn existing logs into a lookup
+
         let existingDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
-        
-        // Iterate through all 30 days
+
         for offset in 0..<30 {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: endDate) else { continue }
             let startOfDay = calendar.startOfDay(for: day)
-            
+
             if !existingDays.contains(startOfDay) {
-                if let planned = try await fetchPlannedSleep(for: startOfDay) {
-                    result.append(planned)
+                // Combine date with user's bedtime and wakeTime
+                let bedtime = combine(date: startOfDay, time: userInfo.bedtime)
+                var wakeTime = combine(date: startOfDay, time: userInfo.wakeTime)
+
+                // If wakeTime <= bedtime, add one day
+                if wakeTime <= bedtime {
+                    wakeTime = calendar.date(byAdding: .day, value: 1, to: wakeTime)!
                 }
+
+                let planned = SleepData(
+                    date: startOfDay,
+                    bedtime: bedtime,
+                    wakeTime: wakeTime,
+                    duration: wakeTime.timeIntervalSince(bedtime),
+                    sessionId: "planned-\(startOfDay.timeIntervalSince1970)"
+                )
+                result.append(planned)
             }
         }
-        
+
         return result.sorted { $0.date < $1.date }
     }
-    
-    private func fetchPlannedSleep(for date: Date) async throws -> SleepData? {
-        guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
 
-        let start = Calendar.current.startOfDay(for: date)
-        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
+    /// Combines a date with a time from another Date
+    private func combine(date: Date, time: Date) -> Date {
+        let calendar = Calendar.current
+        let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
+        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: time)
 
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+        var combined = DateComponents()
+        combined.year = dateComponents.year
+        combined.month = dateComponents.month
+        combined.day = dateComponents.day
+        combined.hour = timeComponents.hour
+        combined.minute = timeComponents.minute
+        combined.second = timeComponents.second
 
-        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<SleepData?, Error>) in
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: 1,
-                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
-            ) { _, samples, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                let sleepDataNilPlaceholder: SleepData? = nil
-                guard let scheduleSample = (samples as? [HKCategorySample])?.first else {
-                    continuation.resume(returning: sleepDataNilPlaceholder)
-                    return
-                }
-
-                continuation.resume(returning: SleepData(
-                    date: start,
-                    bedtime: scheduleSample.startDate,
-                    wakeTime: scheduleSample.endDate,
-                    duration: scheduleSample.endDate.timeIntervalSince(scheduleSample.startDate) / 3600,
-                    sessionId: "planned-\(start.timeIntervalSince1970)"
-                ))
-            }
-
-            healthStore.execute(query)
-        }
+        return calendar.date(from: combined)!
     }
     
     func loadSleepSamplesForChart(filter: SleepFilter) {
-        sleepChartData = processSleepChartData(sleepData, for: filter)
+        sleepChartData = processSleepChartData(for: filter)
     }
     
-    func processSleepChartData(_ sleepData: [SleepData], for filter: SleepFilter) -> [SleepChartData] {
+    func processSleepChartData(for filter: SleepFilter) -> [SleepChartData] {
         let calendar = Calendar.current
         var sleepByDay: [Date: Double] = [:]
         
+        // Determine start of week
+        let today = Date()
+        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today))!
+        
         for sample in sleepData {
-            let day = calendar.startOfDay(for: sample.date)
-            let duration = sample.wakeTime.timeIntervalSince(sample.bedtime) / 3600 // Convert to hours
-            sleepByDay[day, default: 0] += duration
+            let sampleDay = calendar.startOfDay(for: sample.date)
+            
+            // Only include samples in the current week if filter is .week
+            if filter == .thisWeek && sampleDay < startOfWeek {
+                continue
+            }
+            
+            let duration = sample.wakeTime.timeIntervalSince(sample.bedtime) / 3600
+            sleepByDay[sampleDay, default: 0] += duration
         }
         
         return sleepByDay.map { date, duration in
@@ -265,7 +266,8 @@ class HealthManager: NSObject {
                 quality: duration >= 7 ? "Good" : duration >= 6 ? "Fair" : "Poor",
                 timestamp: formatTimestamp(date, for: filter)
             )
-        }.sorted { $0.date < $1.date }
+        }
+        .sorted { $0.date < $1.date }
     }
     
     private func fetchSleepSamples(last30Days: Bool) async throws -> [HKCategorySample] {
@@ -544,33 +546,4 @@ extension HealthManager {
         
         return result.sorted { $0.date > $1.date }
     }
-    
-    //    private func processSleepSamplesForChart(_ samples: [HKCategorySample], for filter: TimeFilter) -> [SleepChartData] {
-    //        let calendar = Calendar.current
-    //        var sleepByDay: [Date: Double] = [:]
-    //
-    //        // Only process asleep samples for chart data
-    //        let asleepSamples = samples.filter {
-    //            $0.value == HKCategoryValueSleepAnalysis.asleep.rawValue ||
-    //            $0.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue ||
-    //            $0.value == HKCategoryValueSleepAnalysis.asleepCore.rawValue ||
-    //            $0.value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue ||
-    //            $0.value == HKCategoryValueSleepAnalysis.asleepREM.rawValue
-    //        }
-    //
-    //        for sample in asleepSamples {
-    //            let day = calendar.startOfDay(for: sample.startDate)
-    //            let duration = sample.endDate.timeIntervalSince(sample.startDate) / 3600 // Convert to hours
-    //            sleepByDay[day, default: 0] += duration
-    //        }
-    //
-    //        return sleepByDay.map { date, duration in
-    //            SleepChartData(
-    //                date: date,
-    //                duration: duration,
-    //                quality: duration >= 7 ? "Good" : duration >= 6 ? "Fair" : "Poor",
-    //                timestamp: formatTimestamp(date, for: filter)
-    //            )
-    //        }.sorted { $0.date < $1.date }
-    //    }
 }
