@@ -6,12 +6,12 @@ enum SleepQuality: String, CaseIterable {
     case good = "Good"
 }
 
-struct SleepData {
+struct SleepData: Identifiable {
+    var id: String
     let date: Date
     let bedtime: Date
     let wakeTime: Date
     let duration: TimeInterval
-    let sessionId: String
     var quality: SleepQuality?
     var description: String?
     var savedFlag: Bool = false

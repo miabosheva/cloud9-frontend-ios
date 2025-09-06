@@ -7,6 +7,7 @@ enum HealthError: Error {
     case healthKitNotAvailable
     case invalidSampleType
     case saveFailed
+    case sleepLogExists
     
     var localizedDescription: String {
         switch self {
@@ -20,6 +21,8 @@ enum HealthError: Error {
             return "Invalid sample type returned from HealthKit"
         case .saveFailed:
             return "Failed to save data to HealthKit"
+        case .sleepLogExists:
+            return "Sleep Log exists."
         }
     }
 }
@@ -186,44 +189,44 @@ class HealthManager: NSObject {
         var result = logs
         let calendar = Calendar.current
         let endDate = Date()
-
+        
         let existingDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
-
+        
         for offset in 0..<30 {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: endDate) else { continue }
             let startOfDay = calendar.startOfDay(for: day)
-
+            
             if !existingDays.contains(startOfDay) {
                 // Combine date with user's bedtime and wakeTime
                 let bedtime = combine(date: startOfDay, time: userInfo.bedtime)
                 var wakeTime = combine(date: startOfDay, time: userInfo.wakeTime)
-
+                
                 // If wakeTime <= bedtime, add one day
                 if wakeTime <= bedtime {
                     wakeTime = calendar.date(byAdding: .day, value: 1, to: wakeTime)!
                 }
-
+                
                 let planned = SleepData(
+                    id: "planned-\(startOfDay.timeIntervalSince1970)",
                     date: startOfDay,
                     bedtime: bedtime,
                     wakeTime: wakeTime,
                     duration: wakeTime.timeIntervalSince(bedtime),
-                    sessionId: "planned-\(startOfDay.timeIntervalSince1970)",
                     savedFlag: false
                 )
                 result.append(planned)
             }
         }
-
-        return result.sorted { $0.date < $1.date }
+        
+        return result.sorted { $0.date > $1.date }
     }
-
+    
     /// Combines a date with a time from another Date
     private func combine(date: Date, time: Date) -> Date {
         let calendar = Calendar.current
         let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
         let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: time)
-
+        
         var combined = DateComponents()
         combined.year = dateComponents.year
         combined.month = dateComponents.month
@@ -231,7 +234,7 @@ class HealthManager: NSObject {
         combined.hour = timeComponents.hour
         combined.minute = timeComponents.minute
         combined.second = timeComponents.second
-
+        
         return calendar.date(from: combined)!
     }
     
@@ -267,7 +270,7 @@ class HealthManager: NSObject {
                 timestamp: formatTimestamp(date, for: filter)
             )
         }
-        .sorted { $0.date < $1.date }
+        .sorted { $0.date > $1.date }
     }
     
     private func fetchSleepSamples(last30Days: Bool) async throws -> [HKCategorySample] {
@@ -317,7 +320,13 @@ class HealthManager: NSObject {
                 return
             }
             
-            var samplesToSave: [HKCategorySample] = []
+            let filteredSleepData = sleepData.filter({ $0.savedFlag == true })
+            for existing in filteredSleepData {
+                if (bedtime < existing.wakeTime) && (wakeTime > existing.bedtime) {
+                    print(error)
+                    throw HealthError.sleepLogExists
+                }
+            }
             
             let asleepSample = HKCategorySample(
                 type: sleepType,
@@ -325,22 +334,18 @@ class HealthManager: NSObject {
                 start: bedtime,
                 end: wakeTime
             )
-            samplesToSave.append(asleepSample)
             
-            // Save all samples
-            try await saveSamples(samplesToSave)
+            try await saveSamples([asleepSample])
             
             let duration = wakeTime.timeIntervalSince(bedtime)
             let hours = Int(duration) / 3600
             let minutes = Int(duration) % 3600 / 60
             print("Sleep log saved successfully! Duration: \(hours)h \(minutes)m")
             
-            // Reload data to reflect changes
             await loadSleepData()
         } catch {
-            await MainActor.run {
-                self.error = error
-            }
+            self.error = error
+            print(error)
         }
     }
     
@@ -359,7 +364,7 @@ class HealthManager: NSObject {
     // MARK: - Delete Sleep Session
     func deleteSleepSession(_ sleepData: SleepData) async {
         do {
-            guard let samplesToDelete = samplesBySessionId[sleepData.sessionId] else {
+            guard let sampleToDelete = samplesBySessionId[sleepData.id] else {
                 await MainActor.run {
                     self.error = HealthError.noSamplesFound
                 }
@@ -368,18 +373,16 @@ class HealthManager: NSObject {
             
             print("Deleting sleep session...")
             
-            try await deleteSamples(samplesToDelete)
+            try await deleteSample(sampleToDelete)
             
-            await MainActor.run {
-                // Remove from local storage
-                self.samplesBySessionId.removeValue(forKey: sleepData.sessionId)
-                
-                // Remove from displayed data
-                self.sleepData.removeAll { $0.sessionId == sleepData.sessionId }
-                
-                let duration = sleepData.formattedDuration
-                print("Sleep session deleted (\(duration))")
-            }
+            // Remove from local storage
+            self.samplesBySessionId.removeValue(forKey: sleepData.id)
+            
+            // Remove from displayed data
+            self.sleepData.removeAll { $0.id == sleepData.id }
+            
+            let duration = sleepData.formattedDuration
+            print("Sleep session deleted (\(duration))")
             
             // Reload data to reflect changes
             await loadSleepData()
@@ -390,7 +393,7 @@ class HealthManager: NSObject {
         }
     }
     
-    private func deleteSamples(_ samples: [HKSample]) async throws {
+    private func deleteSample(_ samples: [HKSample]) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             healthStore.delete(samples) { success, error in
                 if success {
@@ -527,17 +530,17 @@ extension HealthManager {
                     sum + sample.endDate.timeIntervalSince(sample.startDate)
                 }
                 
-                let sessionId = "\(earliestStart.timeIntervalSince1970)-\(index)"
+                let id = "\(earliestStart.timeIntervalSince1970)-\(index)"
                 
                 // Store the samples for potential deletion
-                samplesBySessionId[sessionId] = sessionSamples
+                samplesBySessionId[id] = sessionSamples
                 
                 let sleepData = SleepData(
+                    id: id,
                     date: earliestStart,
                     bedtime: earliestStart,
                     wakeTime: latestEnd,
                     duration: totalSleepDuration,
-                    sessionId: sessionId,
                     savedFlag: true
                 )
                 

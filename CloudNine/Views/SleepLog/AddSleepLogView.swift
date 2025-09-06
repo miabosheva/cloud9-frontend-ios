@@ -4,11 +4,7 @@ struct AddSleepLogView: View {
     @Environment(HealthManager.self) var healthManager
     @Environment(\.dismiss) var dismiss
     
-    @State private var sleepDate = Date()
-    @State private var bedtime = Date()
-    @State private var wakeTime = Date()
-    @State private var sleepQuality: SleepQuality = .fair
-    @State private var description: String = ""
+    @State var viewModel = SleepLogViewModel()
     
     @State private var includeSleepTime = true
     @State private var includeOutOfBedTime = true
@@ -17,37 +13,40 @@ struct AddSleepLogView: View {
         NavigationView {
             Form {
                 Section(header: Text("Sleep Entry Date")) {
-                    DatePicker("Date", selection: $sleepDate, displayedComponents: .date)
-                        .onChange(of: sleepDate) { oldValue, newValue in
-                            updateTimesWithNewDate()
+                    DatePicker("Date", selection: $viewModel.sleepDate, displayedComponents: .date)
+                        .onChange(of: viewModel.sleepDate) { oldValue, newValue in
+                            viewModel.updateTimesWithNewDate()
                         }
                 }
                 
                 Section(header: Text("Sleep Timeline")) {
-                    DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
-                    
-                    DatePicker("Wake Time", selection: $wakeTime, displayedComponents: .hourAndMinute)
+                    DatePicker("Wake Time", selection: $viewModel.wakeTime, displayedComponents: .hourAndMinute)
+                   
+                    HStack {
+                        DatePicker("Bedtime", selection: $viewModel.bedtime, displayedComponents: .hourAndMinute)
+                        Toggle("is Next Day", isOn: $viewModel.isNextDay)
+                    }
                 }
                 
                 Section("Quality and Description") {
-                    Picker("Sleep Quality", selection: $sleepQuality) {
+                    Picker("Sleep Quality", selection: $viewModel.sleepQuality) {
                         ForEach(SleepQuality.allCases, id: \.self) { quality in
                             Text(quality.rawValue).tag(quality)
                         }
                     }
                     
-                    TextField("Describe your sleep...", text: $description)
+                    TextField("Describe your sleep...", text: $viewModel.description)
                 }
                 
                 Section(header: Text("Summary")) {
-                    Text("Duration: \(formatSleepDuration())")
+                    Text("Duration: \(viewModel.formatSleepDuration())")
                         .foregroundColor(.secondary)
                     
-                    Text("Bedtime: \(formattedDateTime(combinedBedtime))")
+                    Text("Bedtime: \(viewModel.formattedDateTime(viewModel.combinedBedtime))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    Text("Wake Time: \(formattedDateTime(combinedWakeTime))")
+                    Text("Wake Time: \(viewModel.formattedDateTime(viewModel.combinedWakeTime))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -65,111 +64,28 @@ struct AddSleepLogView: View {
             .navigationBarItems(
                 leading: Button("Cancel") {
                     dismiss()
-                },
-                trailing: Button("Save") {
-                    saveSleepLog()
                 }
             )
         }
         .onAppear {
-            setupDefaultTimes()
+            viewModel.setupDefaultTimes()
         }
-    }
-    
-    // MARK: - Computed Properties for Combined Dates
-    
-    private var combinedBedtime: Date {
-        combineDateAndTime(date: sleepDate, time: bedtime)
-    }
-    
-    private var combinedWakeTime: Date {
-        let baseDate = shouldUseNextDay(for: wakeTime) ? nextDay(from: sleepDate) : sleepDate
-        return combineDateAndTime(date: baseDate, time: wakeTime)
-    }
-    
-    // MARK: - Helper Methods
-    
-    private func combineDateAndTime(date: Date, time: Date) -> Date {
-        let calendar = Calendar.current
-        let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
-        let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
-        
-        var combined = DateComponents()
-        combined.year = dateComponents.year
-        combined.month = dateComponents.month
-        combined.day = dateComponents.day
-        combined.hour = timeComponents.hour
-        combined.minute = timeComponents.minute
-        combined.second = 0
-        
-        return calendar.date(from: combined) ?? date
-    }
-    
-    private func shouldUseNextDay(for time: Date) -> Bool {
-        let calendar = Calendar.current
-        let timeHour = calendar.component(.hour, from: time)
-        let bedtimeHour = calendar.component(.hour, from: bedtime)
-        
-        // If wake time is earlier in the day than bedtime, it's probably next day
-        return timeHour < bedtimeHour || timeHour < 12 // Assuming wake times before noon are next day
-    }
-    
-    private func nextDay(from date: Date) -> Date {
-        return Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
-    }
-    
-    private func updateTimesWithNewDate() {
-        // When sleep date changes, update the time pickers to maintain the same time
-        // but with the new date
-        bedtime = combineDateAndTime(date: sleepDate, time: bedtime)
-        
-        // For wake times, determine if they should be next day
-        let nextDayDate = nextDay(from: sleepDate)
-        wakeTime = combineDateAndTime(date: shouldUseNextDay(for: wakeTime) ? nextDayDate : sleepDate, time: wakeTime)
-    }
-    
-    private func setupDefaultTimes() {
-        let calendar = Calendar.current
-        let now = Date()
-        
-        // Default to last night
-        sleepDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-        
-        // Set default times - these will be combined with sleepDate later
-        let defaultBedtimeComponents = DateComponents(hour: 22, minute: 30)
-        let defaultWakeTimeComponents = DateComponents(hour: 7, minute: 0)
-        
-        bedtime = calendar.date(from: defaultBedtimeComponents) ?? now
-        wakeTime = calendar.date(from: defaultWakeTimeComponents) ?? now
-        
-        // Now update with the correct dates
-        updateTimesWithNewDate()
-    }
-    
-    private func formatSleepDuration() -> String {
-        let duration = combinedWakeTime.timeIntervalSince(combinedBedtime)
-        
-        let hours = Int(abs(duration)) / 3600
-        let minutes = Int(abs(duration)) % 3600 / 60
-        
-        return "\(hours)h \(minutes)m"
-    }
-    
-    private func formattedDateTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
     
     private func saveSleepLog() {
         Task {
             await healthManager.addSleepLog(
-                bedtime: combinedBedtime,
-                wakeTime: combinedWakeTime
+                bedtime: viewModel.combinedBedtime,
+                wakeTime: viewModel.combinedWakeTime
             )
+            // TODO: - Save to backend metadata for sleep log
             dismiss()
             await healthManager.loadSleepData()
         }
     }
+}
+
+#Preview {
+    AddSleepLogView()
+        .environment(HealthManager())
 }

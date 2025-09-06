@@ -6,7 +6,9 @@ struct NavigationDestination: ViewModifier {
                 .navigationDestination(for: Destination.self) { destination in
                     switch destination {
                     case .profile:
-                        UserSettings()
+                        UserSettingsView()
+                    case .editLog(let logId):
+                        EditSleepLogView(logId: logId)
                     }
                 }
         }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct UserSettings: View {
+struct UserSettingsView: View {
     
     @Environment(HealthManager.self) var healthManager
     
