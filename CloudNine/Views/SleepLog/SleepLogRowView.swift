@@ -48,7 +48,7 @@ struct SleepLogRowView: View {
                     
                     Spacer()
                     
-                    if let sleepQuality = sleepData.quality {
+                    if let sleepQuality = sleepData.sleepQuality {
                         Text(sleepQuality.rawValue)
                             .font(.caption2)
                             .padding(.horizontal, 6)

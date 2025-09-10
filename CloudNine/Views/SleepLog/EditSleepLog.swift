@@ -66,20 +66,15 @@ struct EditSleepLogView: View {
     
     private func saveSleepLog() {
         Task {
-            if let oldSleepData = healthManager.sleepData.first(where: { $0.id == logId }) {
-                await healthManager.deleteSleepSession(oldSleepData)
-            }
-
-            await healthManager.addSleepLog(
+            await healthManager.updateSleepLog(
+                sleepDataId: logId,
                 bedtime: viewModel.combinedBedtime,
-                wakeTime: viewModel.combinedWakeTime
+                wakeTime: viewModel.combinedWakeTime, 
+                sleepQuality: viewModel.sleepQuality,
+                description: viewModel.description,
+                tags: []
             )
-
-            // TODO: save to backend metadata iewModel.sleepQuality, viewModel.description
-
             dismiss()
-            await healthManager.loadSleepData()
         }
     }
 }
-

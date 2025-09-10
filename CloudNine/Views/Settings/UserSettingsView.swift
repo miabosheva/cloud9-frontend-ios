@@ -3,6 +3,7 @@ import SwiftUI
 struct UserSettingsView: View {
     
     @Environment(HealthManager.self) var healthManager
+    @Environment(ErrorManager.self) var errorManager
     
     @State private var bedtime = Date()
     @State private var wakeTime = Date()
@@ -52,10 +53,7 @@ struct UserSettingsView: View {
                         weight: Int(weight) ?? 0
                     )
                     healthManager.userInfo = info
-                    showToast = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        showToast = false
-                    }
+                    errorManager.handle(error: nil, errorTitle: "User Information Saved.", alertType: .toast)
                 }
             }
         }
@@ -67,6 +65,5 @@ struct UserSettingsView: View {
             weight = String(healthManager.userInfo.weight)
         }
         .navigationTitle("Settings")
-        .toast(isShowing: $showToast, message: "User Information Saved.")
     }
 }

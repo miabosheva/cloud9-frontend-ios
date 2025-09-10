@@ -21,7 +21,7 @@ struct AddSleepLogView: View {
                 
                 Section(header: Text("Sleep Timeline")) {
                     DatePicker("Wake Time", selection: $viewModel.wakeTime, displayedComponents: .hourAndMinute)
-                   
+                    
                     HStack {
                         DatePicker("Bedtime", selection: $viewModel.bedtime, displayedComponents: .hourAndMinute)
                         Toggle("is Next Day", isOn: $viewModel.isNextDay)
@@ -76,11 +76,11 @@ struct AddSleepLogView: View {
         Task {
             await healthManager.addSleepLog(
                 bedtime: viewModel.combinedBedtime,
-                wakeTime: viewModel.combinedWakeTime
+                wakeTime: viewModel.combinedWakeTime,
+                sleepQuality: viewModel.sleepQuality,
+                description: viewModel.description
             )
-            // TODO: - Save to backend metadata for sleep log
             dismiss()
-            await healthManager.loadSleepData()
         }
     }
 }

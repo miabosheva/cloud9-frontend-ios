@@ -28,7 +28,7 @@ class SleepLogViewModel {
         self.sleepDate = log.date
         self.bedtime = log.bedtime
         self.wakeTime = log.wakeTime
-        self.sleepQuality = log.quality ?? .fair
+        self.sleepQuality = log.sleepQuality ?? .fair
         self.description = log.description ?? ""
     }
     

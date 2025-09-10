@@ -30,7 +30,9 @@ struct SleepLogView: View {
                                     },
                                     onSave: {
                                         Task {
-                                            await healthManager.addSleepLog(bedtime: sleep.bedtime, wakeTime: sleep.wakeTime)
+                                            await healthManager.markLogAsSaved(
+                                                sleepLog: sleep
+                                            )
                                         }
                                     }
                                 )
@@ -44,11 +46,6 @@ struct SleepLogView: View {
                 }
             }
             .cornerRadius(10)
-            .onAppear {
-                Task {
-                    await healthManager.loadSleepData()
-                }
-            }
             .sheet(isPresented: $showingAddSleep) {
                 AddSleepLogView()
             }

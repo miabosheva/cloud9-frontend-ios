@@ -16,10 +16,12 @@ struct CloudNineApp: App {
 //            fatalError("Could not create ModelContainer: \(error)")
 //        }
 //    }()
+    @State var errorManager = ErrorManager()
     
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .environment(errorManager)
         }
 //        .modelContainer(sharedModelContainer)
     }

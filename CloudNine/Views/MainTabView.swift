@@ -19,6 +19,7 @@ struct MainTabView: View {
                         Label("Sleep Log", systemImage: "moon.stars.fill")
                     }
             }
+            .handleGlobalErrors()
             .environment(healthManager)
         }
     }
