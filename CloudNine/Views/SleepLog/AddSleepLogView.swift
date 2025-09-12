@@ -25,11 +25,31 @@ struct AddSleepLogView: View {
                 }
                 
                 Section(header: Text("Sleep Timeline")) {
-                    DatePicker("Wake Time", selection: $viewModel.wakeTime, displayedComponents: .hourAndMinute)
-                    
                     DatePicker("Bedtime", selection: $viewModel.bedtime, displayedComponents: .hourAndMinute)
+                        .onChange(of: viewModel.bedtime) { oldValue, newValue in
+                            viewModel.validateAndAdjustTimes()
+                        }
                     
-                    Toggle("is Next Day", isOn: $viewModel.isNextDay)
+                    DatePicker("Wake Time", selection: $viewModel.wakeTime, displayedComponents: .hourAndMinute)
+                        .onChange(of: viewModel.wakeTime) { oldValue, newValue in
+                            viewModel.validateAndAdjustTimes()
+                        }
+                    
+                    Toggle("Wake time is next day", isOn: $viewModel.isNextDay)
+                        .onChange(of: viewModel.isNextDay) { oldValue, newValue in
+                            viewModel.updateTimesWithNewDate()
+                        }
+                    
+                    // Validation warning
+                    if !viewModel.isTimeConfigurationValid {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text("Time configuration may not be logical")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
+                    }
                 }
                 
                 Section("Quality and Description") {
@@ -53,6 +73,17 @@ struct AddSleepLogView: View {
                     Text("Wake Time: \(viewModel.formattedDateTime(viewModel.combinedWakeTime))")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    
+                    // Show helpful context
+                    if viewModel.isNextDay {
+                        Text("💤 You'll sleep through midnight")
+                            .font(.caption2)
+                            .foregroundColor(.blue)
+                    } else {
+                        Text("☀️ Same-day sleep (nap or unusual schedule)")
+                            .font(.caption2)
+                            .foregroundColor(.blue)
+                    }
                 }
                 
                 Section {
@@ -61,6 +92,12 @@ struct AddSleepLogView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .foregroundColor(.blue)
+                    .disabled(!viewModel.isTimeConfigurationValid)
+                }
+                
+                // Helper section
+                Section(footer: Text("💡 Tip: 'Next day' means you wake up the day after you went to bed. Most normal sleep spans midnight.")) {
+                    EmptyView()
                 }
             }
             .navigationTitle("Add Sleep Log")
@@ -77,10 +114,6 @@ struct AddSleepLogView: View {
             } catch {
                 errorManager.handle(error: error)
             }
-        }
-        .onChange(of: viewModel.isNextDay) {
-            viewModel.updateTimesWithNewDate()
-            print(viewModel.isNextDay)
         }
     }
     
@@ -104,4 +137,5 @@ struct AddSleepLogView: View {
 #Preview {
     AddSleepLogView(healthManager: HealthManager())
         .environment(HealthManager())
+        .environment(ErrorManager())
 }

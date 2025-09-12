@@ -21,6 +21,20 @@ class SleepLogViewModel {
         return combineDateAndTime(date: baseDate, time: wakeTime)
     }
     
+    var isTimeConfigurationValid: Bool {
+        let bedtimeHour = Calendar.current.component(.hour, from: bedtime)
+        let wakeTimeHour = Calendar.current.component(.hour, from: wakeTime)
+        
+        if isNextDay {
+            // Wake time should be earlier in the day than bedtime for next-day scenario
+            // OR bedtime is late (after 6 PM) and wake time is early (before noon)
+            return bedtimeHour >= 18 || wakeTimeHour <= 12
+        } else {
+            // Same day: wake time should be after bedtime
+            return wakeTimeHour > bedtimeHour
+        }
+    }
+    
     init(healthManager: HealthManager) {
         self.healthManager = healthManager
     }
@@ -37,6 +51,38 @@ class SleepLogViewModel {
         self.wakeTime = log.wakeTime
         self.sleepQuality = log.sleepQuality ?? .fair
         self.description = log.description ?? ""
+        
+        self.isNextDay = determineIfNextDay(bedtime: log.bedtime, wakeTime: log.wakeTime)
+    }
+    
+    func validateAndAdjustTimes() {
+        // Called when user manually changes times or isNextDay toggle
+        let bedtimeHour = Calendar.current.component(.hour, from: bedtime)
+        let wakeTimeHour = Calendar.current.component(.hour, from: wakeTime)
+        
+        // If the configuration doesn't make logical sense, suggest the correct isNextDay setting
+        if !isTimeConfigurationValid {
+            // Auto-correct based on what makes more sense
+            if bedtimeHour >= 20 || bedtimeHour <= 6 { // Late night or very early bedtime
+                if wakeTimeHour >= 5 && wakeTimeHour <= 11 { // Morning wake time
+                    isNextDay = true
+                }
+            } else if bedtimeHour >= 6 && bedtimeHour <= 20 { // Daytime bedtime
+                if wakeTimeHour > bedtimeHour { // Wake time later same day
+                    isNextDay = false
+                }
+            }
+        }
+    }
+    
+    private func determineIfNextDay(bedtime: Date, wakeTime: Date) -> Bool {
+        let calendar = Calendar.current
+        let bedtimeHour = calendar.component(.hour, from: bedtime)
+        let wakeTimeHour = calendar.component(.hour, from: wakeTime)
+        
+        // If bedtime is late (after 6 PM) and wake time is early (before noon), likely next day
+        // OR if wake time hour is less than bedtime hour, it's likely next day
+        return (bedtimeHour >= 18 && wakeTimeHour <= 12) || wakeTimeHour < bedtimeHour
     }
     
     private func combineDateAndTime(date: Date, time: Date) -> Date {
@@ -69,13 +115,17 @@ class SleepLogViewModel {
     }
     
     func updateTimesWithNewDate() {
-        // When sleep date changes, update the time pickers to maintain the same time
-        // but with the new date
-        bedtime = combineDateAndTime(date: sleepDate, time: bedtime)
+        // Don't modify the time components, just update the date logic
+        // The times stay the same, but we recalculate which dates they should be on
         
-        // For wake times, determine if they should be next day
-        let nextDayDate = nextDay(from: sleepDate)
-        wakeTime = combineDateAndTime(date: isNextDay ? nextDayDate : sleepDate, time: wakeTime)
+        // Auto-adjust isNextDay based on current time settings if they seem illogical
+        let bedtimeHour = Calendar.current.component(.hour, from: bedtime)
+        let wakeTimeHour = Calendar.current.component(.hour, from: wakeTime)
+        
+        // Smart auto-adjustment: if current setting doesn't make sense, fix it
+        if !isTimeConfigurationValid {
+            isNextDay = determineIfNextDay(bedtime: bedtime, wakeTime: wakeTime)
+        }
     }
     
     func setupDefaultTimes() throws {
@@ -84,12 +134,15 @@ class SleepLogViewModel {
         
         // Default to last night
         sleepDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-
+        
         let userInfoPerssisted = try? healthManager.fetchLocalUserInfo()
         let userPreference = userInfoPerssisted ?? UserInfo()
         
         bedtime = userPreference.bedtime
         wakeTime = userPreference.wakeTime
+        
+        // Determine if this should be next day based on user preferences
+        isNextDay = determineIfNextDay(bedtime: bedtime, wakeTime: wakeTime)
         
         // Now update with the correct dates
         updateTimesWithNewDate()

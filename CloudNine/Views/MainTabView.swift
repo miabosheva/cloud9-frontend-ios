@@ -14,7 +14,7 @@ struct MainTabView: View {
                         Label("Home", systemImage: "house.fill")
                     }
                 
-                SleepLogView()
+                SleepSummaryTabs()
                     .tabItem {
                         Label("Sleep Log", systemImage: "moon.stars.fill")
                     }
