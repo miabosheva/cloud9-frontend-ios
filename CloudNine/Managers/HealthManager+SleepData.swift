@@ -18,36 +18,6 @@ extension HealthManager {
             UserDefaults.standard.set(newValue, forKey: lastHealthKitSyncKey)
         }
     }
-    
-    // MARK: - Delete All Sleep Data (HealthKit + Local)
-    func deleteAllSleepData() async {
-        do {
-            print("Deleting ALL sleep data from HealthKit and local storage...")
-            
-            let samples = try await fetchSleepSamples()
-
-            if !samples.isEmpty {
-                try await deleteSample(samples)
-                print("Deleted \(samples.count) sleep samples from HealthKit")
-            } else {
-                print("No HealthKit sleep samples found to delete")
-            }
-
-            // Clear local variables
-            sleepData.removeAll()
-            samplesBySessionId.removeAll()
-            lastHealthKitSync = nil
-
-            // Clear metadata
-            try await metadataService.deleteAllMetadata()
-            print("Deleted all local sleep metadata")
-
-            print("✅ All sleep data successfully deleted")
-        } catch {
-            self.error = error
-            print("❌ Failed to delete all sleep data: \(error.localizedDescription)")
-        }
-    }
 
     // MARK: - Enhanced Load Sleep Data with Smart Fetching
     func loadSleepData() async {
@@ -77,12 +47,10 @@ extension HealthManager {
             } else {
                 print("No new HealthKit data, using cached sleep data")
             }
-            
-            // Apply metadata to all sleep data (both existing and new)
-            applyMetadataToSleepData(metadataDict)
-            
             // Fill missing days with schedule
             sleepData = fillMissingDaysWithSchedule(sleepData)
+            // Apply metadata to all sleep data (both existing and new)
+            applyMetadataToSleepData(metadataDict)
             
             print("Loaded \(sleepData.count) sleep logs with metadata")
             
@@ -185,16 +153,17 @@ extension HealthManager {
     
     // MARK: - Apply metadata to sleep data
     private func applyMetadataToSleepData(_ metadataDict: [String: SleepData]) {
-        for (index, sleepItem) in sleepData.enumerated() {
-            if let metadataItem = metadataDict[sleepItem.id] {
-                var enhanced = sleepItem
-                enhanced.sleepQuality = metadataItem.sleepQuality
-                enhanced.description = metadataItem.description
-                enhanced.tags = metadataItem.tags
-                enhanced.isLocalOnly = metadataItem.isLocalOnly
-                enhanced.lastSyncedAt = metadataItem.lastSyncedAt
-                enhanced.needsSync = metadataItem.needsSync
-                sleepData[index] = enhanced
+        print("DEBUG: Applying metadata to \(sleepData.count) items")
+        print("DEBUG: Available metadata for \(metadataDict.count) items")
+        for index in sleepData.indices {
+            if let metadataItem = metadataDict[sleepData[index].id] {
+                sleepData[index].sleepQuality = metadataItem.sleepQuality
+                sleepData[index].description = metadataItem.description
+                sleepData[index].tags = metadataItem.tags
+                sleepData[index].isLocalOnly = metadataItem.isLocalOnly
+                sleepData[index].lastSyncedAt = metadataItem.lastSyncedAt
+                sleepData[index].needsSync = metadataItem.needsSync
+                sleepData[index].savedFlag = metadataItem.savedFlag
             }
         }
     }
@@ -343,9 +312,6 @@ extension HealthManager {
     // MARK: - FIXED Mark Log as Saved (prevents duplicates)
     func markLogAsSaved(sleepLog: SleepData) async {
         do {
-            // Check for overlaps with better logic
-            try await validateNoOverlap(bedtime: sleepLog.bedtime, wakeTime: sleepLog.wakeTime)
-            
             // Save to HealthKit
             guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
                 throw HealthError.failedToCreateType
@@ -511,7 +477,7 @@ extension HealthManager {
                     sum + sample.endDate.timeIntervalSince(sample.startDate)
                 }
                 
-                let id = "\(earliestStart.timeIntervalSince1970)-\(index)"
+                let id = "\(earliestStart.timeIntervalSince1970)-\(latestEnd.timeIntervalSince1970)"
                 
                 // Store the samples for potential deletion
                 samplesBySessionId[id] = sessionSamples
@@ -688,5 +654,36 @@ extension HealthManager {
             )
         }
         .sorted { $0.date > $1.date }
+    }
+
+    // MARK: - Delete All Sleep Data (HealthKit + Local)
+    /// used for debugging 
+    private func deleteAllSleepData() async {
+        do {
+            print("Deleting ALL sleep data from HealthKit and local storage...")
+            
+            let samples = try await fetchSleepSamples()
+
+            if !samples.isEmpty {
+                try await deleteSample(samples)
+                print("Deleted \(samples.count) sleep samples from HealthKit")
+            } else {
+                print("No HealthKit sleep samples found to delete")
+            }
+
+            // Clear local variables
+            sleepData.removeAll()
+            samplesBySessionId.removeAll()
+            lastHealthKitSync = nil
+
+//            // Clear metadata
+//            try await metadataService.deleteAllMetadata()
+//            print("Deleted all local sleep metadata")
+
+            print("All sleep data successfully deleted")
+        } catch {
+            self.error = error
+            print("Failed to delete all sleep data: \(error.localizedDescription)")
+        }
     }
 }

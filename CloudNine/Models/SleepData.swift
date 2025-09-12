@@ -24,17 +24,17 @@ struct SleepData: Identifiable, Codable {
     var bedtime: Date
     var wakeTime: Date
     var duration: TimeInterval
+    
     var sleepQuality: SleepQuality?
     var description: String?
     var savedFlag: Bool = false
-    
     var tags: [String] = []
     var isLocalOnly: Bool = false
     var lastSyncedAt: Date?
     var needsSync: Bool = false
     
-    init(date: Date, bedtime: Date, wakeTime: Date, duration: TimeInterval, savedFlag: Bool, sleepQuality: SleepQuality? = nil, description: String? = nil) {
-        self.id = "\(bedtime.timeIntervalSince1970)-\(Int.random(in: 1000...9999))"
+    init(id: String? = nil, date: Date, bedtime: Date, wakeTime: Date, duration: TimeInterval, savedFlag: Bool, sleepQuality: SleepQuality? = nil, description: String? = nil) {
+        self.id = id ?? "\(bedtime.timeIntervalSince1970)-\(wakeTime.timeIntervalSince1970)"
         self.date = date
         self.bedtime = bedtime
         self.wakeTime = wakeTime
