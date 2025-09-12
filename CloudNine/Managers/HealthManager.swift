@@ -10,10 +10,12 @@ class HealthManager: NSObject {
     var sleepChartData: [SleepChartData] = []
     var heartRateData: [HeartRateData] = []
     var sleepData: [SleepData] = []
-    var userInfo = UserInfo()
     var error: Error?
     
     var samplesBySessionId: [String: [HKCategorySample]] = [:]
+    
+    var metadataService: SleepMetadataServiceProtocol = SleepMetadataService()
+    var userPerssistanceService: UserPerssistanceServiceProtocol = UserPersistenceService()
     
     func requestPermissions() async throws {
         do {

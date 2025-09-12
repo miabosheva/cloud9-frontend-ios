@@ -11,7 +11,7 @@ struct UserSettingsView: View {
     @State private var height = ""
     @State private var weight = ""
     @State private var showToast = false
-    
+    @State private var autoGenerateLogs: Bool = false
     @State private var userInfo: UserInfo?
     
     @State var viewModel = UserSettingsViewModel()
@@ -38,6 +38,10 @@ struct UserSettingsView: View {
                 }
             }
             
+            Section("Auto generate sleep entries") {
+                Toggle("Auto-generate sleep logs based on sleep schedule", isOn: $autoGenerateLogs)
+            }
+            
             Section(header: Text("Body Info")) {
                 TextField("Height (cm)", text: $height)
                     .keyboardType(.numberPad)
@@ -53,7 +57,8 @@ struct UserSettingsView: View {
                             wakeTime: wakeTime,
                             sleepConditions: Array(selectedConditions),
                             height: Int(height) ?? 0,
-                            weight: Int(weight) ?? 0
+                            weight: Int(weight) ?? 0,
+                            autoGenerateSleepLogs: autoGenerateLogs
                         )
                         do {
                             try await viewModel.saveUserInfo(info)
@@ -66,11 +71,14 @@ struct UserSettingsView: View {
             }
         }
         .task {
-            bedtime = healthManager.userInfo.bedtime
-            wakeTime = healthManager.userInfo.wakeTime
-            selectedConditions = Set(healthManager.userInfo.sleepConditions)
-            height = String(healthManager.userInfo.height)
-            weight = String(healthManager.userInfo.weight)
+            let userInfo = try? viewModel.loadUserInfo()
+            let defaultUserInfo = UserInfo()
+            bedtime = userInfo?.bedtime ?? defaultUserInfo.bedtime
+            wakeTime = userInfo?.wakeTime ?? defaultUserInfo.wakeTime
+            selectedConditions = Set(userInfo?.sleepConditions ?? defaultUserInfo.sleepConditions)
+            height = String(userInfo?.height ?? defaultUserInfo.height)
+            weight = String(userInfo?.weight ?? defaultUserInfo.weight)
+            autoGenerateLogs = userInfo?.autoGenerateSleepLogs ?? defaultUserInfo.autoGenerateSleepLogs
         }
         .navigationTitle("Settings")
     }

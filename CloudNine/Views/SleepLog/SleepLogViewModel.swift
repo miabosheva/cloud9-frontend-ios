@@ -84,8 +84,9 @@ class SleepLogViewModel {
         
         // Default to last night
         sleepDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
-        
-        let userPreference = try healthManager.fetchLocalUserInfo()
+
+        let userInfoPerssisted = try? healthManager.fetchLocalUserInfo()
+        let userPreference = userInfoPerssisted ?? UserInfo()
         
         bedtime = userPreference.bedtime
         wakeTime = userPreference.wakeTime

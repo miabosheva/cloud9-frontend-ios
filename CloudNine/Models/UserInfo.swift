@@ -6,19 +6,22 @@ struct UserInfo: Codable {
     var sleepConditions: [SleepConditions]
     var height: Int
     var weight: Int
+    var autoGenerateSleepLogs: Bool = false
     
     init(
         bedtime: Date = UserInfo.defaultBedtime(),
         wakeTime: Date = UserInfo.defaultWakeTime(),
         sleepConditions: [SleepConditions] = [],
         height: Int = 0,
-        weight: Int = 0
+        weight: Int = 0,
+        autoGenerateSleepLogs: Bool = false
     ) {
         self.bedtime = bedtime
         self.wakeTime = wakeTime
         self.sleepConditions = sleepConditions
         self.height = height
         self.weight = weight
+        self.autoGenerateSleepLogs = autoGenerateSleepLogs
     }
     
     static func defaultBedtime() -> Date {

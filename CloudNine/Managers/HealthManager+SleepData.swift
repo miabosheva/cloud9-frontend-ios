@@ -3,10 +3,6 @@ import HealthKit
 
 extension HealthManager {
     
-    private var metadataService: SleepMetadataServiceProtocol {
-        return SleepMetadataService()
-    }
-    
     // MARK: - Storage for tracking last sync
     private var lastHealthKitSyncKey: String { "lastHealthKitSync" }
     
@@ -18,37 +14,33 @@ extension HealthManager {
             UserDefaults.standard.set(newValue, forKey: lastHealthKitSyncKey)
         }
     }
-
+    
     // MARK: - Enhanced Load Sleep Data with Smart Fetching
     func loadSleepData() async throws {
         do {
             // Always load existing metadata first
             let metadataDict = metadataService.loadAllMetadata()
+            print("metadata: \(metadataDict.count)")
             
-            // Check if we need to fetch from HealthKit
-            let needsHealthKitFetch = await shouldFetchFromHealthKit()
+            let newSleepSamples = try await fetchSleepSamples()
+            print("sleep samples fetched: \(newSleepSamples.count)")
             
-            if needsHealthKitFetch {
-                print("New HealthKit data detected, fetching...")
-                
-                // Fetch only new data from HealthKit
-                let newSleepSamples = try await fetchNewSleepSamples()
-                
-                if !newSleepSamples.isEmpty {
-                    // Process new samples and merge with existing data
-                    let newHealthKitSleepData = processSleepSamples(newSleepSamples)
-                    
-                    // Merge new data with existing sleepData, avoiding duplicates
-                    mergeNewSleepData(newHealthKitSleepData)
-                    
-                    // Update last sync timestamp
-                    lastHealthKitSync = Date()
-                }
-            } else {
-                print("No new HealthKit data, using cached sleep data")
+            if !newSleepSamples.isEmpty {
+                let newHealthKitSleepData = processSleepSamples(newSleepSamples)
+                mergeNewSleepData(newHealthKitSleepData)
+                lastHealthKitSync = Date()
             }
+            
             // Fill missing days with schedule
-            sleepData = fillMissingDaysWithSchedule(sleepData)
+            print("sleepdata BEFORE filling with generated data: \(sleepData.count)")
+            
+            let userInfoPerssisted = try? userPerssistanceService.loadUserInfo()
+            let userInfo = userInfoPerssisted ?? UserInfo()
+            if userInfo.autoGenerateSleepLogs {
+                sleepData = try fillMissingDaysWithSchedule(sleepData)
+            }
+            print("sleepdata AFTER filling with generated data: \(sleepData.count)")
+            
             // Apply metadata to all sleep data (both existing and new)
             applyMetadataToSleepData(metadataDict)
             
@@ -57,70 +49,6 @@ extension HealthManager {
         } catch {
             print("Failed to load sleep data with metadata: \(error.localizedDescription)")
             throw error
-        }
-    }
-    
-    // MARK: - Check if HealthKit fetch is needed
-    private func shouldFetchFromHealthKit() async -> Bool {
-        // Always fetch on first run
-        guard let lastSync = lastHealthKitSync else {
-            return true
-        }
-        
-        // Check if there are any new samples since last sync
-        do {
-            let recentSamples = try await fetchSleepSamplesSince(lastSync)
-            return !recentSamples.isEmpty
-        } catch {
-            print("Error checking for new HealthKit data: \(error.localizedDescription)")
-            // On error, be safe and fetch
-            return true
-        }
-    }
-    
-    // MARK: - Fetch only new sleep samples
-    private func fetchNewSleepSamples() async throws -> [HKCategorySample] {
-        if let lastSync = lastHealthKitSync {
-            // Fetch samples since last sync
-            return try await fetchSleepSamplesSince(lastSync)
-        } else {
-            // First time fetch - get last 30 days
-            return try await fetchSleepSamples()
-        }
-    }
-    
-    // MARK: - Fetch sleep samples since specific date
-    private func fetchSleepSamplesSince(_ sinceDate: Date) async throws -> [HKCategorySample] {
-        guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
-            throw HealthError.failedToCreateType
-        }
-        
-        let endDate = Date()
-        let predicate = HKQuery.predicateForSamples(withStart: sinceDate, end: endDate, options: .strictStartDate)
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: sleepType,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [sortDescriptor]
-            ) { _, samples, error in
-                
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                
-                guard let sleepSamples = samples as? [HKCategorySample] else {
-                    continuation.resume(throwing: HealthError.noSamplesFound)
-                    return
-                }
-                
-                continuation.resume(returning: sleepSamples)
-            }
-            
-            healthStore.execute(query)
         }
     }
     
@@ -502,13 +430,15 @@ extension HealthManager {
     }
     
     // MARK: - Fill Missing Days with Schedule
-    private func fillMissingDaysWithSchedule(_ logs: [SleepData]) -> [SleepData] {
+    private func fillMissingDaysWithSchedule(_ logs: [SleepData]) throws -> [SleepData] {
         var result = logs
         let calendar = Calendar.current
         let endDate = Date()
         
         let existingDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
         
+        let userInfoPerssisted = try? userPerssistanceService.loadUserInfo()
+        let userInfo = userInfoPerssisted ?? UserInfo()
         for offset in 0..<30 {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: endDate) else { continue }
             let startOfDay = calendar.startOfDay(for: day)
@@ -659,31 +589,31 @@ extension HealthManager {
         }
         .sorted { $0.date > $1.date }
     }
-
+    
     // MARK: - Delete All Sleep Data (HealthKit + Local)
-    /// used for debugging 
+    /// used for debugging
     private func deleteAllSleepData() async throws {
         do {
             print("Deleting ALL sleep data from HealthKit and local storage...")
             
             let samples = try await fetchSleepSamples()
-
+            
             if !samples.isEmpty {
                 try await deleteSample(samples)
                 print("Deleted \(samples.count) sleep samples from HealthKit")
             } else {
                 print("No HealthKit sleep samples found to delete")
             }
-
+            
             // Clear local variables
             sleepData.removeAll()
             samplesBySessionId.removeAll()
             lastHealthKitSync = nil
-
-//            // Clear metadata
-//            try await metadataService.deleteAllMetadata()
-//            print("Deleted all local sleep metadata")
-
+            
+            //            // Clear metadata
+            //            try await metadataService.deleteAllMetadata()
+            //            print("Deleted all local sleep metadata")
+            
             print("All sleep data successfully deleted")
         } catch {
             print("Failed to delete all sleep data: \(error.localizedDescription)")

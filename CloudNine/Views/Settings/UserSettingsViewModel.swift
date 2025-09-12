@@ -8,4 +8,8 @@ class UserSettingsViewModel {
     func saveUserInfo(_ userInfo: UserInfo) async throws {
         try await service.saveUserInfo(userInfo)
     }
+    
+    func loadUserInfo() throws -> UserInfo {
+        try service.loadUserInfo()
+    }
 }

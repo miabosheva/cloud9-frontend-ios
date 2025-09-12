@@ -9,4 +9,8 @@ class NavigationManager {
         path.append(destination)
         print("navigated to \(destination)")
     }
+    
+    func popToRoot() {
+        path = NavigationPath()
+    }
 }
