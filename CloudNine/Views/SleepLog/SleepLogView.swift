@@ -3,6 +3,7 @@ import SwiftUI
 struct SleepLogView: View {
     
     @Environment(HealthManager.self) var healthManager
+    @Environment(ErrorManager.self) var errorManager
     
     @State private var showingAddSleep = false
     @State var navigationManager = NavigationManager()
@@ -25,14 +26,22 @@ struct SleepLogView: View {
                                     sleepData: sleep,
                                     onDelete: {
                                         Task {
-                                            await healthManager.deleteSleepSession(sleep)
+                                            do {
+                                                try await healthManager.deleteSleepSession(sleep)
+                                            } catch {
+                                                errorManager.handle(error: error)
+                                            }
                                         }
                                     },
                                     onSave: {
                                         Task {
-                                            await healthManager.markLogAsSaved(
-                                                sleepLog: sleep
-                                            )
+                                            do {
+                                                try await healthManager.markLogAsSaved(
+                                                    sleepLog: sleep
+                                                )
+                                            } catch {
+                                                errorManager.handle(error: error)
+                                            }
                                         }
                                     }
                                 )
@@ -47,11 +56,15 @@ struct SleepLogView: View {
             }
             .cornerRadius(10)
             .sheet(isPresented: $showingAddSleep) {
-                AddSleepLogView()
+                AddSleepLogView(healthManager: healthManager)
             }
             .refreshable {
                 Task {
-                    await healthManager.loadSleepData()
+                    do {
+                        try await healthManager.loadSleepData()
+                    } catch {
+                        errorManager.handle(error: error)
+                    }
                 }
             }
             .toolbar {

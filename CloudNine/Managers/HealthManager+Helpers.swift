@@ -95,9 +95,9 @@ extension HealthManager {
                 start2: existing.bedtime, end2: existing.wakeTime
             ) {
                 if existing.savedFlag == false {
-                    await deleteSleepSession(existing)
+                    try await deleteSleepSession(existing)
                 } else {
-                    throw HealthError.sleepLogExists
+                    throw HealthError.sleepLogOverlaps
                 }
             }
         }

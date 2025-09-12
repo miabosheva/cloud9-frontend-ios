@@ -2,13 +2,19 @@ import SwiftUI
 
 struct EditSleepLogView: View {
     @Environment(HealthManager.self) var healthManager
+    @Environment(ErrorManager.self) var errorManager
     @Environment(\.dismiss) var dismiss
     
-    @State var viewModel = SleepLogViewModel()
+    @State var viewModel: SleepLogViewModel
     @State var logId: String
     
     @State private var includeSleepTime = true
     @State private var includeOutOfBedTime = true
+    
+    init(logId: String, healthManager: HealthManager) {
+        self.logId = logId
+        _viewModel = State(initialValue: SleepLogViewModel(healthManager: healthManager))
+    }
     
     var body: some View {
         Form {
@@ -60,20 +66,28 @@ struct EditSleepLogView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.loadSleepLog(by: logId, sleepData: healthManager.sleepData)
+            do {
+                try viewModel.loadSleepLog(by: logId, sleepData: healthManager.sleepData)
+            } catch {
+                errorManager.handle(error: error)
+            }
         }
     }
     
     private func saveSleepLog() {
         Task {
-            await healthManager.updateSleepLog(
-                sleepDataId: logId,
-                bedtime: viewModel.combinedBedtime,
-                wakeTime: viewModel.combinedWakeTime, 
-                sleepQuality: viewModel.sleepQuality,
-                description: viewModel.description,
-                tags: []
-            )
+            do {
+                try await healthManager.updateSleepLog(
+                    sleepDataId: logId,
+                    bedtime: viewModel.combinedBedtime,
+                    wakeTime: viewModel.combinedWakeTime,
+                    sleepQuality: viewModel.sleepQuality,
+                    description: viewModel.description,
+                    tags: []
+                )
+            } catch {
+                errorManager.handle(error: error)
+            }
             dismiss()
         }
     }

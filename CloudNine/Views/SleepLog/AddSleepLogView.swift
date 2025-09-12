@@ -2,12 +2,17 @@ import SwiftUI
 
 struct AddSleepLogView: View {
     @Environment(HealthManager.self) var healthManager
+    @Environment(ErrorManager.self) var errorManager
     @Environment(\.dismiss) var dismiss
     
-    @State var viewModel = SleepLogViewModel()
+    @State var viewModel: SleepLogViewModel
     
     @State private var includeSleepTime = true
     @State private var includeOutOfBedTime = true
+    
+    init(healthManager: HealthManager) {
+        _viewModel = State(initialValue: SleepLogViewModel(healthManager: healthManager))
+    }
     
     var body: some View {
         NavigationView {
@@ -22,10 +27,9 @@ struct AddSleepLogView: View {
                 Section(header: Text("Sleep Timeline")) {
                     DatePicker("Wake Time", selection: $viewModel.wakeTime, displayedComponents: .hourAndMinute)
                     
-                    HStack {
-                        DatePicker("Bedtime", selection: $viewModel.bedtime, displayedComponents: .hourAndMinute)
-                        Toggle("is Next Day", isOn: $viewModel.isNextDay)
-                    }
+                    DatePicker("Bedtime", selection: $viewModel.bedtime, displayedComponents: .hourAndMinute)
+                    
+                    Toggle("is Next Day", isOn: $viewModel.isNextDay)
                 }
                 
                 Section("Quality and Description") {
@@ -68,24 +72,36 @@ struct AddSleepLogView: View {
             )
         }
         .onAppear {
-            viewModel.setupDefaultTimes()
+            do {
+                try viewModel.setupDefaultTimes()
+            } catch {
+                errorManager.handle(error: error)
+            }
+        }
+        .onChange(of: viewModel.isNextDay) {
+            viewModel.updateTimesWithNewDate()
+            print(viewModel.isNextDay)
         }
     }
     
     private func saveSleepLog() {
         Task {
-            await healthManager.addSleepLog(
-                bedtime: viewModel.combinedBedtime,
-                wakeTime: viewModel.combinedWakeTime,
-                sleepQuality: viewModel.sleepQuality,
-                description: viewModel.description
-            )
+            do {
+                try await healthManager.addSleepLog(
+                    bedtime: viewModel.combinedBedtime,
+                    wakeTime: viewModel.combinedWakeTime,
+                    sleepQuality: viewModel.sleepQuality,
+                    description: viewModel.description
+                )
+            } catch {
+                errorManager.handle(error: error)
+            }
             dismiss()
         }
     }
 }
 
 #Preview {
-    AddSleepLogView()
+    AddSleepLogView(healthManager: HealthManager())
         .environment(HealthManager())
 }

@@ -5,6 +5,7 @@ import WatchConnectivity
 
 struct HomeView: View {
     @Environment(HealthManager.self) var healthManager
+    @Environment(ErrorManager.self) var errorManager
     @State var navigationManager = NavigationManager()
     @Bindable var watchConnector = WatchConnector()
     
@@ -60,7 +61,11 @@ struct HomeView: View {
                 Text("To begin a measurement, please open the app on your Apple Watch.")
             }
             .task {
-                await setupView()
+                do {
+                    try await setupView()
+                } catch {
+                    errorManager.handle(error: error)
+                }
             }
             .navigationBarHidden(true)
             .background(Color(.systemGray6))
@@ -68,10 +73,10 @@ struct HomeView: View {
         }
     }
     
-    private func setupView() async {
-        await healthManager.requestPermissions()
+    private func setupView() async throws {
+        try await healthManager.requestPermissions()
         watchConnector.activate()
-        await healthManager.loadInitialData()
+        try await healthManager.loadInitialData()
     }
     
     private var healthMetricsView: some View {
@@ -263,7 +268,11 @@ struct HomeView: View {
                 selectedFilter: $heartRateFilter,
                 onFilterChange: { filter in
                     Task {
-                        await healthManager.loadHeartRateData(for: filter)
+                        do {
+                            try await healthManager.loadHeartRateData(for: filter)
+                        } catch {
+                            errorManager.handle(error: error)
+                        }
                     }
                 }
             )

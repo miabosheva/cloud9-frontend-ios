@@ -14,6 +14,8 @@ struct UserSettingsView: View {
     
     @State private var userInfo: UserInfo?
     
+    @State var viewModel = UserSettingsViewModel()
+    
     var body: some View {
         Form {
             Section(header: Text("Sleep Schedule")) {
@@ -45,15 +47,21 @@ struct UserSettingsView: View {
             
             Section {
                 Button("Save") {
-                    let info = UserInfo(
-                        bedtime: bedtime,
-                        wakeTime: wakeTime,
-                        sleepConditions: Array(selectedConditions),
-                        height: Int(height) ?? 0,
-                        weight: Int(weight) ?? 0
-                    )
-                    healthManager.userInfo = info
-                    errorManager.handle(error: nil, errorTitle: "User Information Saved.", alertType: .toast)
+                    Task {
+                        let info = UserInfo(
+                            bedtime: bedtime,
+                            wakeTime: wakeTime,
+                            sleepConditions: Array(selectedConditions),
+                            height: Int(height) ?? 0,
+                            weight: Int(weight) ?? 0
+                        )
+                        do {
+                            try await viewModel.saveUserInfo(info)
+                            errorManager.handle(error: nil, errorTitle: "User Information Saved.", alertType: .toast)
+                        } catch {
+                            errorManager.handle(error: error)
+                        }
+                    }
                 }
             }
         }

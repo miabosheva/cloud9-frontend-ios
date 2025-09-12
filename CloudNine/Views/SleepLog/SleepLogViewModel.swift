@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 @Observable
 class SleepLogViewModel {
     var sleepDate = Date()
@@ -8,6 +9,8 @@ class SleepLogViewModel {
     var sleepQuality: SleepQuality = .fair
     var description: String = ""
     var isNextDay: Bool = true
+    
+    private var healthManager: HealthManager
     
     var combinedBedtime: Date {
         combineDateAndTime(date: sleepDate, time: bedtime)
@@ -18,9 +21,13 @@ class SleepLogViewModel {
         return combineDateAndTime(date: baseDate, time: wakeTime)
     }
     
-    func loadSleepLog(by id: String, sleepData: [SleepData]) {
+    init(healthManager: HealthManager) {
+        self.healthManager = healthManager
+    }
+    
+    func loadSleepLog(by id: String, sleepData: [SleepData]) throws {
         guard let log = sleepData.first(where: {$0.id == id}) else {
-            setupDefaultTimes()
+            try setupDefaultTimes()
             return
         }
         
@@ -71,19 +78,17 @@ class SleepLogViewModel {
         wakeTime = combineDateAndTime(date: isNextDay ? nextDayDate : sleepDate, time: wakeTime)
     }
     
-    func setupDefaultTimes() {
+    func setupDefaultTimes() throws {
         let calendar = Calendar.current
         let now = Date()
         
         // Default to last night
         sleepDate = calendar.date(byAdding: .day, value: -1, to: now) ?? now
         
-        // Set default times - these will be combined with sleepDate later
-        let defaultBedtimeComponents = DateComponents(hour: 22, minute: 30)
-        let defaultWakeTimeComponents = DateComponents(hour: 7, minute: 0)
+        let userPreference = try healthManager.fetchLocalUserInfo()
         
-        bedtime = calendar.date(from: defaultBedtimeComponents) ?? now
-        wakeTime = calendar.date(from: defaultWakeTimeComponents) ?? now
+        bedtime = userPreference.bedtime
+        wakeTime = userPreference.wakeTime
         
         // Now update with the correct dates
         updateTimesWithNewDate()

@@ -15,7 +15,7 @@ class HealthManager: NSObject {
     
     var samplesBySessionId: [String: [HKCategorySample]] = [:]
     
-    func requestPermissions() async {
+    func requestPermissions() async throws {
         do {
             guard HKHealthStore.isHealthDataAvailable() else {
                 await MainActor.run {
@@ -37,15 +37,13 @@ class HealthManager: NSObject {
             try await healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead)
             print("Health permissions granted")
         } catch {
-            await MainActor.run {
-                self.error = error
-            }
+            throw error
         }
     }
     
-    func loadInitialData() async {
-        await loadHeartRateData(for: .today)
-        await loadSleepData()
+    func loadInitialData() async throws {
+        try await loadHeartRateData(for: .today)
+        try await loadSleepData()
         loadSleepSamplesForChart(filter: .thisWeek)
     }
 }

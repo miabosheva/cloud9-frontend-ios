@@ -5,7 +5,7 @@ extension HealthManager {
     // MARK: - Heart Rate Data Loading
     //    For .today and .yesterday: Average per hour.
     //    For .thisWeek and .thisMonth: Average per day.
-    func loadHeartRateData(for filter: HeartFilter) async {
+    func loadHeartRateData(for filter: HeartFilter) async throws {
         do {
             let heartRateSamples = try await fetchHeartRateSamples(for: filter)
             let calendar = Calendar.current
@@ -50,11 +50,7 @@ extension HealthManager {
             self.heartRateData = aggregatedData
             
         } catch {
-            //            await MainActor.run {
-            //                self.heartRateChartData = generateMockHeartRateData(for: filter)
-            //                print("Failed to load heart rate data: \(error.localizedDescription)")
-            //            }
-            print(error.localizedDescription)
+            throw error
         }
     }
     

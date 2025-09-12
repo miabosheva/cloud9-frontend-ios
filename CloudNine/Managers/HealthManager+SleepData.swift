@@ -3,8 +3,8 @@ import HealthKit
 
 extension HealthManager {
     
-    private var metadataService: SleepMetadataService {
-        return LocalSleepMetadataService()
+    private var metadataService: SleepMetadataServiceProtocol {
+        return SleepMetadataService()
     }
     
     // MARK: - Storage for tracking last sync
@@ -20,7 +20,7 @@ extension HealthManager {
     }
 
     // MARK: - Enhanced Load Sleep Data with Smart Fetching
-    func loadSleepData() async {
+    func loadSleepData() async throws {
         do {
             // Always load existing metadata first
             let metadataDict = metadataService.loadAllMetadata()
@@ -55,8 +55,8 @@ extension HealthManager {
             print("Loaded \(sleepData.count) sleep logs with metadata")
             
         } catch {
-            self.error = error
             print("Failed to load sleep data with metadata: \(error.localizedDescription)")
+            throw error
         }
     }
     
@@ -169,7 +169,7 @@ extension HealthManager {
     }
     
     // MARK: - Force refresh from HealthKit
-    func forceRefreshFromHealthKit() async {
+    func forceRefreshFromHealthKit() async throws {
         print("Force refreshing all data from HealthKit...")
         
         // Clear existing data and sync timestamp
@@ -178,7 +178,7 @@ extension HealthManager {
         lastHealthKitSync = nil
         
         // Reload everything
-        await loadSleepData()
+        try await loadSleepData()
     }
     
     // MARK: - Update Sleep Log with proper date handling
@@ -189,7 +189,7 @@ extension HealthManager {
         sleepQuality: SleepQuality?,
         description: String?,
         tags: [String] = []
-    ) async {
+    ) async throws {
         do {
             // Find the sleep data
             guard let index = sleepData.firstIndex(where: { $0.id == sleepDataId }) else {
@@ -274,13 +274,13 @@ extension HealthManager {
             }
             
         } catch {
-            self.error = error
             print("Error updating sleep log: \(error.localizedDescription)")
+            throw error
         }
     }
     
     // MARK: - Enhanced Delete with proper metadata cleanup
-    func deleteSleepSession(_ sleepData: SleepData) async {
+    func deleteSleepSession(_ sleepData: SleepData) async throws {
         do {
             // Delete from HealthKit
             if let sampleToDelete = samplesBySessionId[sleepData.id] {
@@ -305,13 +305,13 @@ extension HealthManager {
             
             print("Sleep session and metadata deleted")
         } catch {
-            self.error = error
             print("Error deleting sleep session: \(error.localizedDescription)")
+            throw error
         }
     }
     
     // MARK: - FIXED Mark Log as Saved (prevents duplicates)
-    func markLogAsSaved(sleepLog: SleepData) async {
+    func markLogAsSaved(sleepLog: SleepData) async throws {
         do {
             // Save to HealthKit
             guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
@@ -352,12 +352,10 @@ extension HealthManager {
             Task {
                 try? await metadataService.syncPendingMetadata()
             }
-            
             print("Sleep log marked as saved successfully! Duration: \(updatedLog.formattedDuration)")
-            
         } catch {
-            self.error = error
             print("Error marking sleep log as saved: \(error.localizedDescription)")
+            throw error
         }
     }
     
@@ -368,7 +366,7 @@ extension HealthManager {
         sleepQuality: SleepQuality?,
         description: String?,
         tags: [String] = []
-    ) async {
+    ) async throws {
         do {
             // Check for overlaps with better logic
             try await validateNoOverlap(bedtime: bedtime, wakeTime: wakeTime)
@@ -424,10 +422,9 @@ extension HealthManager {
                     try? await metadataService.syncPendingMetadata()
                 }
             }
-            
         } catch {
-            self.error = error
             print("Error adding sleep log: \(error.localizedDescription)")
+            throw error
         }
     }
     
@@ -613,7 +610,7 @@ extension HealthManager {
         return sleepData.filter { $0.needsSync && $0.hasMetadata }
     }
     
-    func markAsSynced(sleepDataId: String) async {
+    func markAsSynced(sleepDataId: String) async throws {
         guard let index = sleepData.firstIndex(where: { $0.id == sleepDataId }) else { return }
         
         sleepData[index].needsSync = false
@@ -623,7 +620,7 @@ extension HealthManager {
         do {
             try await metadataService.saveMetadata(sleepData[index])
         } catch {
-            print("Error updating sync status: \(error.localizedDescription)")
+            throw error
         }
     }
     
@@ -665,7 +662,7 @@ extension HealthManager {
 
     // MARK: - Delete All Sleep Data (HealthKit + Local)
     /// used for debugging 
-    private func deleteAllSleepData() async {
+    private func deleteAllSleepData() async throws {
         do {
             print("Deleting ALL sleep data from HealthKit and local storage...")
             
@@ -689,8 +686,8 @@ extension HealthManager {
 
             print("All sleep data successfully deleted")
         } catch {
-            self.error = error
             print("Failed to delete all sleep data: \(error.localizedDescription)")
+            throw error
         }
     }
 }

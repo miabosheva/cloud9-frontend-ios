@@ -1,14 +1,16 @@
 import Foundation
 
-enum HealthError: String, Error, LocalizedError {
+enum HealthError: Error, LocalizedError {
     case failedToCreateType
     case noSamplesFound
     case healthKitNotAvailable
     case invalidSampleType
     case saveFailed
     case sleepLogExists
+    case sleepLogOverlaps
+    case userInfoNotFound
     
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .failedToCreateType:
             return "Failed to create HealthKit data type"
@@ -22,6 +24,10 @@ enum HealthError: String, Error, LocalizedError {
             return "Failed to save data to HealthKit"
         case .sleepLogExists:
             return "Sleep Log exists."
+        case .sleepLogOverlaps:
+            return "Sleep Log times overlap with another log."
+        case .userInfoNotFound:
+            return "Error while decoding user profile. User Info not found."
         }
     }
 }

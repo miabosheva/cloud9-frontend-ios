@@ -1,6 +1,6 @@
 import Foundation
 
-struct UserInfo {
+struct UserInfo: Codable {
     var bedtime: Date
     var wakeTime: Date
     var sleepConditions: [SleepConditions]
@@ -39,7 +39,7 @@ struct UserInfo {
 }
 
 // TODO: - Define more sleep conditions
-enum SleepConditions: CaseIterable, Hashable {
+enum SleepConditions: CaseIterable, Hashable, Codable {
     case sleepApnea
     case insomnia
     
