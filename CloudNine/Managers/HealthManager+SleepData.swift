@@ -246,6 +246,7 @@ extension HealthManager {
             updatedSleepData.bedtime = newBedtime
             updatedSleepData.wakeTime = newWakeTime
             updatedSleepData.duration = newWakeTime.timeIntervalSince(newBedtime)
+            updatedSleepData.savedFlag = true
             
             // Update date field when bedtime changes
             if bedtime != nil {
@@ -334,7 +335,6 @@ extension HealthManager {
             // Update the existing log to mark as saved
             var updatedLog = sleepData[index]
             updatedLog.savedFlag = true
-            updatedLog.duration = sleepLog.wakeTime.timeIntervalSince(sleepLog.bedtime)
             
             // Store the HealthKit sample with the SAME ID to prevent duplicates
             samplesBySessionId[sleepLog.id] = [asleepSample]
@@ -345,6 +345,13 @@ extension HealthManager {
             // DON'T reset sync timestamp - just update lastHealthKitSync to now
             // This prevents unnecessary re-fetching
             lastHealthKitSync = Date()
+            
+            try await metadataService.saveMetadata(updatedLog)
+            
+            // Sync to backend
+            Task {
+                try? await metadataService.syncPendingMetadata()
+            }
             
             print("Sleep log marked as saved successfully! Duration: \(updatedLog.formattedDuration)")
             
