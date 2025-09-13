@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct CalendarView: View {
+    @Environment(HealthManager.self) var healthManager
+    
     @State private var currentMonth = Date.now
     @State private var selectedDate = Date.now
     @State private var days: [Date] = []
+    @State private var viewModel = CalendarViewModel()
     
     let daysOfWeek = Date.capitalizedFirstLettersOfWeekdays
     let columns = Array(repeating: GridItem(.flexible()), count: 7)
@@ -55,18 +58,31 @@ struct CalendarView: View {
                             onDateSelected(selectedDate)
                         }
                     } label: {
-                        Text(day.formatted(.dateTime.day()))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(foregroundStyle(for: day))
-                            .frame(maxWidth: .infinity, minHeight: 40)
-                            .background(
+                        VStack {
+                            Text(day.formatted(.dateTime.day()))
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(foregroundStyle(for: day))
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                            
+                            ForEach(viewModel.entriesWithWakeTimeToday(sleepData: healthManager.sleepData, day: day)) { log in
                                 Circle()
-                                    .foregroundStyle(
-                                        day.formattedDate == selectedDate.formattedDate
-                                            ? .blue
-                                            : .clear
-                                    )
-                            )
+                                    .fill(log.qualityColor)
+                                    .overlay {
+                                        Text("\(log.formattedDuration)")
+                                            .font(.system(size: 10))
+                                            .foregroundColor(.white)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                            }
+                            .padding(4)
+                        }
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(
+                                    day.formattedDate == selectedDate.formattedDate ? .gray : .clear,
+                                    lineWidth: 2
+                                )
+                        )
                     }
                     .disabled(day > Date.now.startOfDay || day.monthInt > currentMonth.monthInt)
                 }
@@ -100,4 +116,5 @@ struct CalendarView: View {
 
 #Preview {
     SleepCalendarView()
+        .environment(HealthManager())
 }
