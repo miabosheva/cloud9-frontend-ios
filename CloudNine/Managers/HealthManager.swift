@@ -6,6 +6,7 @@ import Foundation
 class HealthManager: NSObject {
     
     @ObservationIgnored let healthStore = HKHealthStore()
+    @ObservationIgnored var firebaseManager = FirebaseManager()
     
     var sleepChartData: [SleepChartData] = []
     var heartRateData: [HeartRateData] = []
@@ -13,8 +14,6 @@ class HealthManager: NSObject {
     var error: Error?
     
     var samplesBySessionId: [String: [HKCategorySample]] = [:]
-    
-    var metadataService: SleepMetadataServiceProtocol = SleepMetadataService()
     var userPerssistanceService: UserPerssistanceServiceProtocol = UserPersistenceService()
     
     func requestPermissions() async throws {

@@ -19,7 +19,7 @@ extension HealthManager {
     func loadSleepData() async throws {
         do {
             // Always load existing metadata first
-            let metadataDict = metadataService.loadAllMetadata()
+            let metadataDict = try await firebaseManager.loadMetadataFromFirebase()
             print("metadata: \(metadataDict.count)")
             
             let newSleepSamples = try await fetchSleepSamples()
@@ -191,14 +191,14 @@ extension HealthManager {
             sleepData[index] = updatedSleepData
             
             // Save metadata
-            try await metadataService.saveMetadata(updatedSleepData)
+            try await firebaseManager.saveMetadata(updatedSleepData)
             
             let timeUpdate = (bedtime != nil || wakeTime != nil) ? " and times" : ""
             print("Sleep metadata\(timeUpdate) updated successfully")
             
             // Sync to backend
             Task {
-                try? await metadataService.syncPendingMetadata()
+                try? await firebaseManager.syncPendingMetadata()
             }
             
         } catch {
@@ -226,7 +226,7 @@ extension HealthManager {
             }
             
             // Delete metadata from local storage
-            try await metadataService.deleteMetadata(for: sleepData.id)
+            try await firebaseManager.deleteMetadata(for: sleepData.id)
             
             // Remove from local array
             self.sleepData.removeAll { $0.id == sleepData.id }
@@ -274,11 +274,11 @@ extension HealthManager {
             // This prevents unnecessary re-fetching
             lastHealthKitSync = Date()
             
-            try await metadataService.saveMetadata(updatedLog)
+            try await firebaseManager.saveMetadata(updatedLog)
             
             // Sync to backend
             Task {
-                try? await metadataService.syncPendingMetadata()
+                try? await firebaseManager.syncPendingMetadata()
             }
             print("Sleep log marked as saved successfully! Duration: \(updatedLog.formattedDuration)")
         } catch {
@@ -332,7 +332,7 @@ extension HealthManager {
             
             // Save metadata locally
             if newSleepData.hasMetadata {
-                try await metadataService.saveMetadata(newSleepData)
+                try await firebaseManager.saveMetadata(newSleepData)
             }
             
             // Update local array
@@ -347,7 +347,7 @@ extension HealthManager {
             // Sync to backend if needed
             if newSleepData.needsSync {
                 Task {
-                    try? await metadataService.syncPendingMetadata()
+                    try? await firebaseManager.syncPendingMetadata()
                 }
             }
         } catch {
@@ -548,7 +548,7 @@ extension HealthManager {
         sleepData[index].lastSyncedAt = Date()
         
         do {
-            try await metadataService.saveMetadata(sleepData[index])
+            try await firebaseManager.saveMetadata(sleepData[index])
         } catch {
             throw error
         }
@@ -611,7 +611,7 @@ extension HealthManager {
             lastHealthKitSync = nil
             
             //            // Clear metadata
-            //            try await metadataService.deleteAllMetadata()
+            //            try await firebaseManager.deleteAllMetadata()
             //            print("Deleted all local sleep metadata")
             
             print("All sleep data successfully deleted")

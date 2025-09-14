@@ -1,6 +1,6 @@
 import SwiftUI
 import SwiftData
-import HealthKit
+import FirebaseCore
 
 @main
 struct CloudNineApp: App {
@@ -16,6 +16,16 @@ struct CloudNineApp: App {
 //            fatalError("Could not create ModelContainer: \(error)")
 //        }
 //    }()
+    
+    init() {
+        guard let filePath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+              let options = FirebaseOptions(contentsOfFile: filePath) else {
+            fatalError("Failed to setup firebase")
+        }
+        
+        FirebaseApp.configure(options: options)
+    }
+    
     @State var errorManager = ErrorManager()
     
     var body: some Scene {

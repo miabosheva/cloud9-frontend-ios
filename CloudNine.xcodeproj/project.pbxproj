@@ -10,6 +10,10 @@
 		0DB92F722E4BB1F9008481F2 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */; };
 		0DB92F742E4BB205008481F2 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F732E4BB205008481F2 /* WatchConnectivity.framework */; };
 		0DBEF8172E081CC6009A33F8 /* CloudNineWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BDD297632E76D96B001DFF35 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297622E76D96B001DFF35 /* FirebaseCore */; };
+		BDD297652E76D982001DFF35 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297642E76D982001DFF35 /* FirebaseAuth */; };
+		BDD297672E76D989001DFF35 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297662E76D989001DFF35 /* FirebaseFirestore */; };
+		BDD297692E76D991001DFF35 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297682E76D991001DFF35 /* FirebaseAnalytics */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,6 +81,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BDD297632E76D96B001DFF35 /* FirebaseCore in Frameworks */,
+				BDD297672E76D989001DFF35 /* FirebaseFirestore in Frameworks */,
+				BDD297652E76D982001DFF35 /* FirebaseAuth in Frameworks */,
+				BDD297692E76D991001DFF35 /* FirebaseAnalytics in Frameworks */,
 				0DB92F722E4BB1F9008481F2 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -142,6 +150,10 @@
 			);
 			name = CloudNine;
 			packageProductDependencies = (
+				BDD297622E76D96B001DFF35 /* FirebaseCore */,
+				BDD297642E76D982001DFF35 /* FirebaseAuth */,
+				BDD297662E76D989001DFF35 /* FirebaseFirestore */,
+				BDD297682E76D991001DFF35 /* FirebaseAnalytics */,
 			);
 			productName = CloudNine;
 			productReference = 0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */;
@@ -196,6 +208,9 @@
 			);
 			mainGroup = 0DBEF7B82E06CF6C009A33F8;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0DBEF7C22E06CF6C009A33F8 /* Products */;
 			projectDirPath = "";
@@ -534,6 +549,40 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BDD297622E76D96B001DFF35 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		BDD297642E76D982001DFF35 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		BDD297662E76D989001DFF35 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		BDD297682E76D991001DFF35 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0DBEF7B92E06CF6C009A33F8 /* Project object */;
 }
