@@ -104,3 +104,4 @@ Desktop.ini
 # Files that are typically generated or are not part of the source code.
 .swift-format # SwiftFormat configuration (sometimes tracked, sometimes ignored)
 # .swiftlint.yml # SwiftLint configuration (usually tracked)
+GoogleService-Info.plist
