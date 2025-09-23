@@ -26,12 +26,9 @@ struct CloudNineApp: App {
         FirebaseApp.configure(options: options)
     }
     
-    @State var errorManager = ErrorManager()
-    
     var body: some Scene {
         WindowGroup {
-            MainTabView()
-                .environment(errorManager)
+            AppRootView()
         }
 //        .modelContainer(sharedModelContainer)
     }
