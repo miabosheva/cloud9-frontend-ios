@@ -1,6 +1,8 @@
 import Foundation
 
 struct UserInfo: Codable {
+    var firstName: String
+    var lastName: String
     var bedtime: Date
     var wakeTime: Date
     var sleepConditions: [SleepConditions]
@@ -9,6 +11,8 @@ struct UserInfo: Codable {
     var autoGenerateSleepLogs: Bool = false
     
     init(
+        firstName: String = "",
+        lastName: String = "",
         bedtime: Date = UserInfo.defaultBedtime(),
         wakeTime: Date = UserInfo.defaultWakeTime(),
         sleepConditions: [SleepConditions] = [],
@@ -16,6 +20,8 @@ struct UserInfo: Codable {
         weight: Int = 0,
         autoGenerateSleepLogs: Bool = false
     ) {
+        self.firstName = firstName
+        self.lastName = lastName
         self.bedtime = bedtime
         self.wakeTime = wakeTime
         self.sleepConditions = sleepConditions

@@ -2,11 +2,13 @@ import SwiftUI
 import Charts
 import HealthKit
 import WatchConnectivity
+import FirebaseAuth
 
 struct HomeView: View {
     @Environment(HealthManager.self) var healthManager
     @Environment(ErrorManager.self) var errorManager
     @State var navigationManager = NavigationManager()
+    @State var viewModel = HomeViewModel()
     @Bindable var watchConnector = WatchConnector()
     
     @State private var showingAddSleep = false
@@ -15,6 +17,13 @@ struct HomeView: View {
     @State private var sleepFilter: SleepFilter = .thisWeek
     @State var showingInfoAlert: Bool = false
     @State private var animate = false
+    @State private var userInfo = UserInfo()
+    
+    private var userManager = UserManager()
+    
+    init(watchConnector: WatchConnector) {
+        self.watchConnector = watchConnector
+    }
     
     var body: some View {
         
@@ -28,7 +37,7 @@ struct HomeView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
-                            Text("John Doe")
+                            Text("\(userInfo.firstName) \(userInfo.lastName)")
                                 .font(.title2)
                                 .fontWeight(.bold)
                         }
@@ -77,6 +86,7 @@ struct HomeView: View {
         try await healthManager.requestPermissions()
         watchConnector.activate()
         try await healthManager.loadInitialData()
+        userInfo = try await userManager.fetchUserInfo()
     }
     
     private var healthMetricsView: some View {

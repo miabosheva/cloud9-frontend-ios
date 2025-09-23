@@ -5,6 +5,9 @@ struct UserSettingsView: View {
     @Environment(HealthManager.self) var healthManager
     @Environment(ErrorManager.self) var errorManager
     
+    private var authManager = AuthManager()
+    private var userManager = UserManager()
+    
     @State private var bedtime = Date()
     @State private var wakeTime = Date()
     @State private var selectedConditions: Set<SleepConditions> = []
@@ -13,8 +16,6 @@ struct UserSettingsView: View {
     @State private var showToast = false
     @State private var autoGenerateLogs: Bool = false
     @State private var userInfo: UserInfo?
-    
-    @State var viewModel = UserSettingsViewModel()
     
     var body: some View {
         Form {
@@ -61,7 +62,7 @@ struct UserSettingsView: View {
                             autoGenerateSleepLogs: autoGenerateLogs
                         )
                         do {
-                            try await viewModel.saveUserInfo(info)
+                            try await userManager.saveUserInfo(info)
                             errorManager.handle(error: nil, errorTitle: "User Information Saved.", alertType: .toast)
                         } catch {
                             errorManager.handle(error: error)
@@ -69,9 +70,19 @@ struct UserSettingsView: View {
                     }
                 }
             }
+            
+            Section {
+                Button("Log Out") {
+                    do {
+                        try authManager.signOut()
+                    } catch {
+                        errorManager.handle(error: error)
+                    }
+                }
+            }
         }
         .task {
-            let userInfo = try? viewModel.loadUserInfo()
+            let userInfo = try? await userManager.fetchUserInfo()
             let defaultUserInfo = UserInfo()
             bedtime = userInfo?.bedtime ?? defaultUserInfo.bedtime
             wakeTime = userInfo?.wakeTime ?? defaultUserInfo.wakeTime
