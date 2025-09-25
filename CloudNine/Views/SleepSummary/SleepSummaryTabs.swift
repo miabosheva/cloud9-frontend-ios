@@ -32,6 +32,7 @@ struct SleepSummaryTabs: View {
                 // Swipeable pages
                 TabView(selection: $selectedTab) {
                     SleepCalendarView()
+                        .environment(navigationManager)
                         .tag(0)
                     
                     SleepLogView()

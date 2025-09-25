@@ -50,7 +50,7 @@ struct CalendarView: View {
             }
             
             // Grid of days
-            LazyVGrid(columns: columns, spacing: 10) {
+            LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(days, id: \.self) { day in
                     Button {
                         if day <= Date.now.startOfDay && day.monthInt <= currentMonth.monthInt {
@@ -60,11 +60,11 @@ struct CalendarView: View {
                     } label: {
                         VStack {
                             Text(day.formatted(.dateTime.day()))
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(foregroundStyle(for: day))
                                 .frame(maxWidth: .infinity, minHeight: 40)
                             
-                            ForEach(viewModel.entriesWithWakeTimeToday(sleepData: healthManager.sleepData, day: day)) { log in
+                            ForEach(viewModel.entriesFromDate(sleepData: healthManager.sleepData, day: day)) { log in
                                 Circle()
                                     .fill(log.qualityColor)
                                     .overlay {
@@ -78,8 +78,9 @@ struct CalendarView: View {
                         }
                         .background(
                             RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.accentColor.opacity(0.03))
                                 .stroke(
-                                    day.formattedDate == selectedDate.formattedDate ? .gray : .clear,
+                                    day.formattedDate == selectedDate.formattedDate ? Color.accentColor : .clear,
                                     lineWidth: 2
                                 )
                         )

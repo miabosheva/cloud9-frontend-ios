@@ -2,9 +2,10 @@ import SwiftUI
 
 struct SleepLogRowView: View {
     let sleepData: SleepData
-    let onDelete: () -> Void
-    let onSave: () -> Void
     
+    @Environment(NavigationManager.self) var navigationManager
+    @Environment(HealthManager.self) var healthManager
+    @Environment(ErrorManager.self) var errorManager
     @State var showDeleteAlert: Bool = false
     
     var body: some View {
@@ -89,7 +90,7 @@ struct SleepLogRowView: View {
                 if sleepData.savedFlag {
                     showDeleteAlert = true
                 } else {
-                    onSave()
+                    saveData()
                 }
             }) {
                 ZStack {
@@ -130,11 +131,36 @@ struct SleepLogRowView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: sleepData.savedFlag)
         .alert("Delete Sleep Log", isPresented: $showDeleteAlert) {
             Button("Delete", role: .destructive) {
-                onDelete()
+                deleteData()
             }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Are you sure you want to delete this sleep log entry? This action cannot be undone.")
+        }
+        .onTapGesture {
+            navigationManager.navigate(to: .editLog(logId: sleepData.id))
+        }
+    }
+    
+    func saveData() {
+        Task {
+            do {
+                try await healthManager.markLogAsSaved(
+                    sleepLog: sleepData
+                )
+            } catch {
+                errorManager.handle(error: error)
+            }
+        }
+    }
+    
+    func deleteData() {
+        Task {
+            do {
+                try await healthManager.deleteSleepSession(sleepData)
+            } catch {
+                errorManager.handle(error: error)
+            }
         }
     }
 }
@@ -146,23 +172,17 @@ struct SleepLogRowView_Previews: PreviewProvider {
         VStack(spacing: 12) {
             // Saved entry preview
             SleepLogRowView(
-                sleepData: SampleSleepData.saved,
-                onDelete: {},
-                onSave: {}
+                sleepData: SampleSleepData.saved
             )
             
             // Unsaved entry preview
             SleepLogRowView(
-                sleepData: SampleSleepData.unsaved,
-                onDelete: {},
-                onSave: {}
+                sleepData: SampleSleepData.unsaved
             )
             
             // Entry with metadata
             SleepLogRowView(
-                sleepData: SampleSleepData.withMetadata,
-                onDelete: {},
-                onSave: {}
+                sleepData: SampleSleepData.withMetadata
             )
         }
         .padding()
@@ -171,15 +191,11 @@ struct SleepLogRowView_Previews: PreviewProvider {
         
         VStack(spacing: 12) {
             SleepLogRowView(
-                sleepData: SampleSleepData.saved,
-                onDelete: {},
-                onSave: {}
+                sleepData: SampleSleepData.saved
             )
             
             SleepLogRowView(
-                sleepData: SampleSleepData.unsaved,
-                onDelete: {},
-                onSave: {}
+                sleepData: SampleSleepData.unsaved
             )
         }
         .padding()

@@ -20,31 +20,8 @@ struct SleepLogView: View {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         ForEach(healthManager.sleepData) { sleep in
                             SleepLogRowView(
-                                sleepData: sleep,
-                                onDelete: {
-                                    Task {
-                                        do {
-                                            try await healthManager.deleteSleepSession(sleep)
-                                        } catch {
-                                            errorManager.handle(error: error)
-                                        }
-                                    }
-                                },
-                                onSave: {
-                                    Task {
-                                        do {
-                                            try await healthManager.markLogAsSaved(
-                                                sleepLog: sleep
-                                            )
-                                        } catch {
-                                            errorManager.handle(error: error)
-                                        }
-                                    }
-                                }
+                                sleepData: sleep
                             )
-                            .onTapGesture {
-                                navigationManager.navigate(to: .editLog(logId: sleep.id))
-                            }
                         }
                         .padding(.horizontal, 16)
                     }
