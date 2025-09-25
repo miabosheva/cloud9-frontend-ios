@@ -9,6 +9,8 @@ struct UserInfo: Codable {
     var height: Int
     var weight: Int
     var autoGenerateSleepLogs: Bool = false
+    var trackingGoal: TrackingGoal = .balanced
+    var sleepDuration: Double = 8.0
     
     init(
         firstName: String = "",
@@ -18,7 +20,9 @@ struct UserInfo: Codable {
         sleepConditions: [SleepConditions] = [],
         height: Int = 0,
         weight: Int = 0,
-        autoGenerateSleepLogs: Bool = false
+        autoGenerateSleepLogs: Bool = false,
+        trackingGoal: TrackingGoal = .balanced,
+        sleepDuration: Double = 8.0
     ) {
         self.firstName = firstName
         self.lastName = lastName
@@ -28,6 +32,8 @@ struct UserInfo: Codable {
         self.height = height
         self.weight = weight
         self.autoGenerateSleepLogs = autoGenerateSleepLogs
+        self.trackingGoal = trackingGoal
+        self.sleepDuration = sleepDuration
     }
     
     static func defaultBedtime() -> Date {
@@ -44,18 +50,5 @@ struct UserInfo: Codable {
         let calendar = Calendar.current
         let todayWakeTime = calendar.date(from: components) ?? Date.now
         return calendar.date(byAdding: .day, value: 1, to: todayWakeTime) ?? todayWakeTime
-    }
-}
-
-// TODO: - Define more sleep conditions
-enum SleepConditions: CaseIterable, Hashable, Codable {
-    case sleepApnea
-    case insomnia
-    
-    var displayName: String {
-        switch self {
-        case .sleepApnea: return "Sleep Apnea"
-        case .insomnia: return "Insomnia"
-        }
     }
 }

@@ -53,8 +53,11 @@
 			membershipExceptions = (
 				Models/HeartRateData.swift,
 				Models/SleepChartData.swift,
+				Models/SleepCondition.swift,
 				Models/SleepData.swift,
+				Models/TrackingGoal.swift,
 				Models/UserInfo.swift,
+				Utilities/SleepDurationHelper.swift,
 			);
 			target = 0DBEF80C2E081CC3009A33F8 /* CloudNineWatch Watch App */;
 		};

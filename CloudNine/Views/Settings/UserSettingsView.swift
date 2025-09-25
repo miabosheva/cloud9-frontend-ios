@@ -16,81 +16,320 @@ struct UserSettingsView: View {
     @State private var showToast = false
     @State private var autoGenerateLogs: Bool = false
     @State private var userInfo: UserInfo?
+    @State private var trackingGoal: TrackingGoal = .balanced
+    @State private var sleepDuration: Double = 8.0
+    @State private var isLoading = false
+    @State private var showLogoutAlert = false
     
     var body: some View {
         Form {
-            Section(header: Text("Sleep Schedule")) {
-                DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
-                DatePicker("Wake Time", selection: $wakeTime, displayedComponents: .hourAndMinute)
+            // Sleep Schedule Section
+            Section {
+                HStack {
+                    Image(systemName: "moon.fill")
+                        .foregroundColor(.indigo)
+                        .frame(width: 24)
+                    DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.compact)
+                }
+                
+                HStack {
+                    Image(systemName: "sun.max.fill")
+                        .foregroundColor(.orange)
+                        .frame(width: 24)
+                    DatePicker("Wake Time", selection: $wakeTime, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.compact)
+                }
+                
+                // Sleep duration preview
+                HStack {
+                    Image(systemName: "clock.fill")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    Text("Sleep Duration")
+                    Spacer()
+                    Text(SleepDurationHelper.calculateSleepDuration(bedtime: bedtime, wakeTime: wakeTime))
+                        .foregroundColor(.secondary)
+                        .font(.system(.body, design: .monospaced))
+                }
+            } header: {
+                Label("Sleep Schedule", systemImage: "clock.circle")
+            } footer: {
+                Text("Set your preferred sleep and wake times for consistent scheduling.")
             }
             
-            Section(header: Text("Sleep Conditions")) {
+            // Sleep Goal Section
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "target")
+                            .foregroundColor(.green)
+                            .frame(width: 24)
+                        Text("Tracking Goal")
+                            .font(.headline)
+                    }
+                    
+                    Picker("Tracking Goal", selection: $trackingGoal) {
+                        ForEach(TrackingGoal.allCases, id: \.self) { goal in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(goal.displayName)
+                                    .font(.body)
+                                    .fontWeight(.medium)
+                                Text(goal.description)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .tag(goal)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                }
+                
+                HStack {
+                    Image(systemName: "bed.double.fill")
+                        .foregroundColor(.purple)
+                        .frame(width: 24)
+                    Text("Recommended Sleep")
+                    Spacer()
+                    TextField("8.0", value: $sleepDuration, format: .number.precision(.fractionLength(1)))
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                    Text("hours")
+                        .foregroundColor(.secondary)
+                }
+            } header: {
+                Label("Sleep Goals", systemImage: "target")
+            } footer: {
+                Text("Choose how you want to track sleep debt and set your ideal sleep duration.")
+            }
+            
+            // Health Conditions Section
+            Section {
+                if selectedConditions.isEmpty {
+                    HStack {
+                        Image(systemName: "heart.circle")
+                            .foregroundColor(.red)
+                        Text("No conditions selected")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
                 ForEach(SleepConditions.allCases, id: \.self) { condition in
-                    Toggle(condition.displayName, isOn: Binding(
-                        get: { selectedConditions.contains(condition) },
-                        set: { isSelected in
-                            if isSelected {
-                                selectedConditions.insert(condition)
-                            } else {
-                                selectedConditions.remove(condition)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(condition.displayName)
+                                .font(.body)
+                            if let description = condition.description {
+                                Text(description)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                         }
-                    ))
-                }
-            }
-            
-            Section("Auto generate sleep entries") {
-                Toggle("Auto-generate sleep logs based on sleep schedule", isOn: $autoGenerateLogs)
-            }
-            
-            Section(header: Text("Body Info")) {
-                TextField("Height (cm)", text: $height)
-                    .keyboardType(.numberPad)
-                TextField("Weight (kg)", text: $weight)
-                    .keyboardType(.numberPad)
-            }
-            
-            Section {
-                Button("Save") {
-                    Task {
-                        let info = UserInfo(
-                            bedtime: bedtime,
-                            wakeTime: wakeTime,
-                            sleepConditions: Array(selectedConditions),
-                            height: Int(height) ?? 0,
-                            weight: Int(weight) ?? 0,
-                            autoGenerateSleepLogs: autoGenerateLogs
-                        )
-                        do {
-                            try await userManager.saveUserInfo(info)
-                            errorManager.handle(error: nil, errorTitle: "User Information Saved.", alertType: .toast)
-                        } catch {
-                            errorManager.handle(error: error)
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: Binding(
+                            get: { selectedConditions.contains(condition) },
+                            set: { isSelected in
+                                if isSelected {
+                                    selectedConditions.insert(condition)
+                                } else {
+                                    selectedConditions.remove(condition)
+                                }
+                            }
+                        ))
+                        .labelsHidden()
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if selectedConditions.contains(condition) {
+                            selectedConditions.remove(condition)
+                        } else {
+                            selectedConditions.insert(condition)
                         }
                     }
                 }
+            } header: {
+                Label("Sleep Conditions", systemImage: "heart.text.square")
+            } footer: {
+                Text("Select any conditions that may affect your sleep quality.")
+            }
+            
+            // Body Information Section
+            Section {
+                HStack {
+                    Image(systemName: "ruler")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    Text("Height")
+                    Spacer()
+                    TextField("170", text: $height)
+                        .keyboardType(.numberPad)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                    Text("cm")
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack {
+                    Image(systemName: "scalemass")
+                        .foregroundColor(.orange)
+                        .frame(width: 24)
+                    Text("Weight")
+                    Spacer()
+                    TextField("70", text: $weight)
+                        .keyboardType(.numberPad)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                    Text("kg")
+                        .foregroundColor(.secondary)
+                }
+            } header: {
+                Label("Body Information", systemImage: "person.circle")
+            } footer: {
+                Text("Optional: Used for more accurate health insights.")
+            }
+            
+            // Automation Section
+            Section {
+                HStack {
+                    Image(systemName: "gearshape.fill")
+                        .foregroundColor(.gray)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-generate Sleep Logs")
+                            .font(.body)
+                        Text("Automatically create entries based on your schedule")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Toggle("", isOn: $autoGenerateLogs)
+                        .labelsHidden()
+                }
+            } header: {
+                Label("Automation", systemImage: "gearshape.2")
+            }
+            
+            // Actions Section
+            Section {
+                Button(action: saveUserInfo) {
+                    HStack {
+                        if isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.white)
+                        }
+                        Text("Save Settings")
+                            .fontWeight(.medium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .disabled(isLoading)
+                .buttonStyle(.plain)
             }
             
             Section {
-                Button("Log Out") {
-                    do {
-                        try authManager.signOut()
-                    } catch {
-                        errorManager.handle(error: error)
+                Button(action: { showLogoutAlert = true }) {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .foregroundColor(.red)
+                        Text("Sign Out")
+                            .foregroundColor(.red)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.large)
+        .hideKeyboardWhenTappedAround()
+        .alert("Sign Out", isPresented: $showLogoutAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Sign Out", role: .destructive) {
+                signOut()
+            }
+        } message: {
+            Text("Are you sure you want to sign out?")
+        }
+        .task {
+            await loadUserInfo()
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func loadUserInfo() async {
+        do {
+            let userInfo = try await userManager.fetchUserInfo()
+            
+            await MainActor.run {
+                bedtime = userInfo.bedtime
+                wakeTime = userInfo.wakeTime
+                selectedConditions = Set(userInfo.sleepConditions)
+                height = String(userInfo.height )
+                weight = String(userInfo.weight)
+                autoGenerateLogs = userInfo.autoGenerateSleepLogs
+                trackingGoal = userInfo.trackingGoal
+                sleepDuration = userInfo.sleepDuration 
+            }
+        } catch {
+            errorManager.handle(error: error)
+        }
+    }
+    
+    private func saveUserInfo() {
+        Task {
+            isLoading = true
+            
+            let info = UserInfo(
+                bedtime: bedtime,
+                wakeTime: wakeTime,
+                sleepConditions: Array(selectedConditions),
+                height: Int(height) ?? 0,
+                weight: Int(weight) ?? 0,
+                autoGenerateSleepLogs: autoGenerateLogs,
+                trackingGoal: trackingGoal,
+                sleepDuration: sleepDuration
+            )
+            
+            do {
+                try await userManager.saveUserInfo(info)
+                await MainActor.run {
+                    isLoading = false
+                    errorManager.handle(
+                        error: nil,
+                        errorTitle: "Settings Saved Successfully!",
+                        alertType: .toast
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorManager.handle(error: error)
                 }
             }
         }
-        .task {
-            let userInfo = try? await userManager.fetchUserInfo()
-            let defaultUserInfo = UserInfo()
-            bedtime = userInfo?.bedtime ?? defaultUserInfo.bedtime
-            wakeTime = userInfo?.wakeTime ?? defaultUserInfo.wakeTime
-            selectedConditions = Set(userInfo?.sleepConditions ?? defaultUserInfo.sleepConditions)
-            height = String(userInfo?.height ?? defaultUserInfo.height)
-            weight = String(userInfo?.weight ?? defaultUserInfo.weight)
-            autoGenerateLogs = userInfo?.autoGenerateSleepLogs ?? defaultUserInfo.autoGenerateSleepLogs
+    }
+    
+    private func signOut() {
+        do {
+            try authManager.signOut()
+        } catch {
+            errorManager.handle(error: error)
         }
-        .navigationTitle("Settings")
     }
 }

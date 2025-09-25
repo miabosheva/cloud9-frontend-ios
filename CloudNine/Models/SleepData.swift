@@ -83,4 +83,8 @@ struct SleepData: Identifiable, Codable {
             Color.blue
         }
     }
+    
+    var durationInHours: Double {
+        return duration / 3600.0
+    }
 }
