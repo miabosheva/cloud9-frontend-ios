@@ -20,26 +20,14 @@ struct EditSleepLogView: View {
             Form {
                 Section(header: Text("Sleep Entry Date")) {
                     DatePicker("Date", selection: $viewModel.sleepDate, displayedComponents: .date)
-                        .onChange(of: viewModel.sleepDate) { oldValue, newValue in
-                            viewModel.updateTimesWithNewDate()
-                        }
                 }
                 
                 Section(header: Text("Sleep Timeline")) {
                     DatePicker("Bedtime", selection: $viewModel.bedtime, displayedComponents: .hourAndMinute)
-                        .onChange(of: viewModel.bedtime) { oldValue, newValue in
-                            viewModel.validateAndAdjustTimes()
-                        }
                     
                     DatePicker("Wake Time", selection: $viewModel.wakeTime, displayedComponents: .hourAndMinute)
-                        .onChange(of: viewModel.wakeTime) { oldValue, newValue in
-                            viewModel.validateAndAdjustTimes()
-                        }
                     
                     Toggle("Wake time is next day", isOn: $viewModel.isNextDay)
-                        .onChange(of: viewModel.isNextDay) { oldValue, newValue in
-                            viewModel.updateTimesWithNewDate()
-                        }
                     
                     // Validation warning
                     if !viewModel.isTimeConfigurationValid {
