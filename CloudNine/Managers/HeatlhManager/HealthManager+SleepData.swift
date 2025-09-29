@@ -34,8 +34,8 @@ extension HealthManager {
             // Fill missing days with schedule
             print("sleepdata BEFORE filling with generated data: \(sleepData.count)")
             
-            let userInfoPerssisted = try? userPerssistanceService.loadUserInfo()
-            let userInfo = userInfoPerssisted ?? UserInfo()
+            let userInfoPerssisted = try await UserManager().fetchUserInfo()
+            let userInfo = userInfoPerssisted
             if userInfo.autoGenerateSleepLogs {
                 sleepData = try fillMissingDaysWithSchedule(sleepData)
             }
