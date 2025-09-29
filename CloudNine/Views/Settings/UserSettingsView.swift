@@ -276,14 +276,15 @@ struct UserSettingsView: View {
             let userInfo = try await userManager.fetchUserInfo()
             
             await MainActor.run {
+                self.userInfo = userInfo
                 bedtime = userInfo.bedtime
                 wakeTime = userInfo.wakeTime
                 selectedConditions = Set(userInfo.sleepConditions)
-                height = String(userInfo.height )
+                height = String(userInfo.height)
                 weight = String(userInfo.weight)
                 autoGenerateLogs = userInfo.autoGenerateSleepLogs
                 trackingGoal = userInfo.trackingGoal
-                sleepDuration = userInfo.sleepDuration 
+                sleepDuration = userInfo.sleepDuration
             }
         } catch {
             errorManager.handle(error: error)
@@ -294,18 +295,24 @@ struct UserSettingsView: View {
         Task {
             isLoading = true
             
-            let info = UserInfo(
-                bedtime: bedtime,
-                wakeTime: wakeTime,
-                sleepConditions: Array(selectedConditions),
-                height: Int(height) ?? 0,
-                weight: Int(weight) ?? 0,
-                autoGenerateSleepLogs: autoGenerateLogs,
-                trackingGoal: trackingGoal,
-                sleepDuration: sleepDuration
-            )
-            
             do {
+                guard let userInfo else {
+                    throw HealthError.userInfoNotFound
+                }
+                
+                let info = UserInfo(
+                    firstName: userInfo.firstName,
+                    lastName: userInfo.lastName,
+                    bedtime: bedtime,
+                    wakeTime: wakeTime,
+                    sleepConditions: Array(selectedConditions),
+                    height: Int(height) ?? 0,
+                    weight: Int(weight) ?? 0,
+                    autoGenerateSleepLogs: autoGenerateLogs,
+                    trackingGoal: trackingGoal,
+                    sleepDuration: sleepDuration
+                )
+                
                 try await userManager.saveUserInfo(info)
                 await MainActor.run {
                     isLoading = false
