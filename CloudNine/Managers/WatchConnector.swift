@@ -7,16 +7,12 @@ class WatchConnector: NSObject, WCSessionDelegate {
     var isWorkoutActive: Bool = false
     var isWatchConnected: Bool = false
     var statusMessage: String = ""
+    var measurementTimestamp: Date? = nil
     
     override init() {
         super.init()
         if WCSession.isSupported() {
             WCSession.default.delegate = self
-        }
-    }
-    
-    func activate() {
-        if WCSession.isSupported() {
             WCSession.default.activate()
         }
     }
@@ -80,6 +76,7 @@ class WatchConnector: NSObject, WCSessionDelegate {
         DispatchQueue.main.async {
             if let heartRate = message["heartRate"] as? Double {
                 self.currentHeartRate = heartRate
+                self.measurementTimestamp = Date.now
             }
             
             if let workoutActive = message["workoutActive"] as? Bool {

@@ -228,7 +228,6 @@ struct UserSettingsView: View {
                                 .scaleEffect(0.8)
                         } else {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.white)
                         }
                         Text("Save Settings")
                             .fontWeight(.medium)

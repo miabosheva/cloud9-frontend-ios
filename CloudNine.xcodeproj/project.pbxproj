@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0DB92F722E4BB1F9008481F2 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */; };
-		0DB92F742E4BB205008481F2 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F732E4BB205008481F2 /* WatchConnectivity.framework */; };
 		0DBEF8172E081CC6009A33F8 /* CloudNineWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BD25D55F2E8B185500DE7968 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */; };
+		BD604CFE2E8B177E00C614C9 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BD604CFD2E8B177E00C614C9 /* WatchConnectivity.framework */; };
 		BDD297632E76D96B001DFF35 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297622E76D96B001DFF35 /* FirebaseCore */; };
 		BDD297652E76D982001DFF35 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297642E76D982001DFF35 /* FirebaseAuth */; };
 		BDD297672E76D989001DFF35 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297662E76D989001DFF35 /* FirebaseFirestore */; };
@@ -42,9 +42,9 @@
 
 /* Begin PBXFileReference section */
 		0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
-		0DB92F732E4BB205008481F2 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.4.sdk/System/Library/Frameworks/WatchConnectivity.framework; sourceTree = DEVELOPER_DIR; };
 		0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudNine.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CloudNineWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		BD604CFD2E8B177E00C614C9 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.5.sdk/System/Library/Frameworks/WatchConnectivity.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -96,7 +96,7 @@
 				BDD297672E76D989001DFF35 /* FirebaseFirestore in Frameworks */,
 				BDD297652E76D982001DFF35 /* FirebaseAuth in Frameworks */,
 				BDD297692E76D991001DFF35 /* FirebaseAnalytics in Frameworks */,
-				0DB92F722E4BB1F9008481F2 /* WatchConnectivity.framework in Frameworks */,
+				BD25D55F2E8B185500DE7968 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -104,7 +104,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0DB92F742E4BB205008481F2 /* WatchConnectivity.framework in Frameworks */,
+				BD604CFE2E8B177E00C614C9 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,7 +114,7 @@
 		0DB92F702E4BB1F9008481F2 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				0DB92F732E4BB205008481F2 /* WatchConnectivity.framework */,
+				BD604CFD2E8B177E00C614C9 /* WatchConnectivity.framework */,
 				0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */,
 			);
 			name = Frameworks;
@@ -482,6 +482,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = CloudNineWatch;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to your heart rate data during workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app creates workout sessions to monitor your heart rate in real-time.";
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = miabosheva.com.Cloud9;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -515,6 +516,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = CloudNineWatch;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to your heart rate data during workouts.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app creates workout sessions to monitor your heart rate in real-time.";
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = miabosheva.com.Cloud9;
 				LD_RUNPATH_SEARCH_PATHS = (

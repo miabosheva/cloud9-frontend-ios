@@ -81,6 +81,13 @@ extension Date {
         return formatter.string(from: self)
     }
     
+    var formattedDateTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:s"
+        formatter.timeZone = .current
+        return formatter.string(from: self)
+    }
+    
     var formattedDateHourCombined: String {
         let formatter = ISO8601DateFormatter()
         formatter.timeZone = .current

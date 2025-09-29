@@ -11,6 +11,7 @@ class HealthManager: NSObject {
     var sleepChartData: [SleepChartData] = []
     var heartRateData: [HeartRateData] = []
     var sleepData: [SleepData] = []
+    var sleepDeptResult: AutomatedSleepDebtResult?
     var error: Error?
     
     var samplesBySessionId: [String: [HKCategorySample]] = [:]
@@ -46,5 +47,21 @@ class HealthManager: NSObject {
         try await loadHeartRateData(for: .today)
         try await loadSleepData()
         loadSleepSamplesForChart(filter: .thisWeek)
+    }
+    
+    func calculateSleepDept(user: UserInfo) {
+        var settings = AutomatedSleepDebtCalculator.AutomationSettings()
+        settings.primaryGoal = user.trackingGoal
+        settings.adaptiveStrategy = true
+        settings.dataQualityThreshold = 0.7
+
+        let automatedCalculator = AutomatedSleepDebtCalculator(
+            recommendedSleepHours: user.sleepDuration,
+            settings: settings
+        )
+
+        // One-line automated calculation
+        let result = automatedCalculator.automaticCalculateDebt(sleepData: sleepData)
+        self.sleepDeptResult = result
     }
 }
