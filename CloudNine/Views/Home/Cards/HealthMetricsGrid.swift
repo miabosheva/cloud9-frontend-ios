@@ -6,6 +6,24 @@ struct HealthMetricsGrid: View {
     @Binding var showingSleepDebtDetails: Bool
     @Binding var showingInfoAlert: Bool
     
+    var sleepFromToday: [SleepData] {
+        let calendar = Calendar.current
+        let day = Date.now
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: day)!
+        
+        return healthManager.sleepData.filter { data in
+            calendar.isDate(data.date, inSameDayAs: yesterday)
+        }
+    }
+    
+    var duration: String {
+        return sleepFromToday.totalFormattedDuration
+    }
+    
+    var quality: String {
+        return sleepFromToday.medianQuality?.rawValue ?? ""
+    }
+    
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 16) {
@@ -18,9 +36,7 @@ struct HealthMetricsGrid: View {
                     )
                 }
                 
-                TemperatureCard()
-                
-                SleepQualityCard()
+                SleepQualityCard(duration: duration, quality: quality)
             }
             .padding(.horizontal, 20)
         }

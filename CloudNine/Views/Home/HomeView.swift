@@ -38,12 +38,6 @@ struct HomeView: View {
                         showingInfoAlert: $showingInfoAlert
                     )
                     
-                    QuickActionsSection(
-                        showingAddSleep: $showingAddSleep,
-                        watchConnector: watchConnector,
-                        navigationManager: navigationManager
-                    )
-                    
                     SleepInsightsSection(
                         healthManager: healthManager,
                         errorManager: errorManager,

@@ -94,7 +94,9 @@ struct RealTimeHeartRateCard: View {
     
     func colorForBPM(_ bpm: Double) -> Color {
         switch bpm {
-        case ..<60:
+        case ..<40:
+            return .primary
+        case 40..<60:
             return .green
         case 60..<100:
             return .yellow

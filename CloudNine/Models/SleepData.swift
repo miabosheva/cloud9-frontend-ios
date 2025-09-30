@@ -88,3 +88,26 @@ struct SleepData: Identifiable, Codable {
         return duration / 3600.0
     }
 }
+
+extension Array where Element == SleepData {
+    var totalFormattedDuration: String {
+        let totalDuration = self.reduce(0) { $0 + $1.duration }
+        let hours = Int(totalDuration) / 3600
+        let minutes = Int(totalDuration) % 3600 / 60
+        return "\(hours)h \(minutes)m"
+    }
+
+    var medianQuality: SleepQuality? {
+        let qualities = self.compactMap { $0.sleepQuality }
+            .sorted { $0.rawValue < $1.rawValue }
+
+        guard !qualities.isEmpty else { return nil }
+
+        let middle = qualities.count / 2
+        if qualities.count % 2 == 0 {
+            return qualities[middle - 1]
+        } else {
+            return qualities[middle]
+        }
+    }
+}
