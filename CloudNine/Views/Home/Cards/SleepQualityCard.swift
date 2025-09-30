@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct SleepQualityCard: View {
-    var duration: String
-    var quality: String
+    var duration: String?
+    var quality: String?
     
     var body: some View {
         VStack(spacing: 20) {
@@ -18,21 +18,29 @@ struct SleepQualityCard: View {
                     .foregroundColor(.secondary)
             }
             
-            Text(duration)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 6) {
-                Text(quality)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+            if let duration, let quality {
+                Text(duration)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
                 
-                Text("Sleep Quality")
-                    .font(.caption)
+                VStack(spacing: 6) {
+                    Text(quality)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    Text("Sleep Quality")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.bottom, 8)
+            } else {
+                Text("No Entry Yet")
+                    .fontWeight(.medium)
                     .foregroundColor(.secondary)
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
             }
-            .padding(.bottom, 8)
         }
         .padding(16)
         .frame(width: 180)
@@ -44,4 +52,5 @@ struct SleepQualityCard: View {
 
 #Preview {
     SleepQualityCard(duration: "8h 0m", quality: "Good")
+    SleepQualityCard(duration: nil, quality: nil)
 }

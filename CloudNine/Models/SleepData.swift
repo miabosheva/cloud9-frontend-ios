@@ -90,10 +90,13 @@ struct SleepData: Identifiable, Codable {
 }
 
 extension Array where Element == SleepData {
-    var totalFormattedDuration: String {
+    var totalFormattedDuration: String? {
         let totalDuration = self.reduce(0) { $0 + $1.duration }
         let hours = Int(totalDuration) / 3600
         let minutes = Int(totalDuration) % 3600 / 60
+        if (hours == 0 && minutes == 0) {
+            return nil
+        }
         return "\(hours)h \(minutes)m"
     }
 

@@ -44,7 +44,7 @@ class HealthManager: NSObject {
     }
     
     func loadInitialData() async throws {
-        try await loadHeartRateData(for: .today)
+        try await loadHeartRateData(for: .thisMonth)
         try await loadSleepData()
         loadSleepSamplesForChart(filter: .thisWeek)
     }

@@ -16,12 +16,12 @@ struct HealthMetricsGrid: View {
         }
     }
     
-    var duration: String {
+    var duration: String? {
         return sleepFromToday.totalFormattedDuration
     }
     
-    var quality: String {
-        return sleepFromToday.medianQuality?.rawValue ?? ""
+    var quality: String? {
+        return sleepFromToday.medianQuality?.rawValue
     }
     
     var body: some View {
