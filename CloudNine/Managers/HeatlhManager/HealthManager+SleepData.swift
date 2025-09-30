@@ -563,16 +563,24 @@ extension HealthManager {
         let calendar = Calendar.current
         var sleepByDay: [Date: Double] = [:]
         
-        // Determine start of week
         let today = Date()
-        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today))!
+        let startOfWeek: Date = {
+            return calendar.date(byAdding: .day, value: -6, to: today) ?? today
+        }()
+        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today))!
         
         for sample in sleepData {
             let sampleDay = calendar.startOfDay(for: sample.date)
-            
-            // Only include samples in the current week if filter is .week
-            if filter == .thisWeek && sampleDay < startOfWeek {
-                continue
+                        
+            switch filter {
+            case .thisWeek:
+                if sampleDay < startOfWeek {
+                    continue
+                }
+            case .thisMonth:
+                if sampleDay < startOfMonth {
+                    continue
+                }
             }
             
             let duration = sample.wakeTime.timeIntervalSince(sample.bedtime) / 3600

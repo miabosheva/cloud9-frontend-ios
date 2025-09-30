@@ -18,12 +18,6 @@ struct HeartRateSection: View {
                     .fontWeight(.semibold)
                 
                 Spacer()
-                
-                Button("Details") {
-                    // Navigate to heart rate details
-                }
-                .font(.subheadline)
-                .foregroundColor(.blue)
             }
             
             HeartFilterButtonsView(
