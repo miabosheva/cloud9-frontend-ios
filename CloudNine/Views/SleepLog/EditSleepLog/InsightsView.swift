@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct InsightsView: View {
-    @Binding var insightText: String
+    
+    @Environment(\.dismiss) var dismiss
+    var insightText: String
     
     var body: some View {
         NavigationStack {
@@ -38,6 +40,13 @@ struct InsightsView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Sleep Insight")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
     
@@ -159,5 +168,5 @@ struct InsightSection {
 }
 
 #Preview {
-    InsightsView(insightText: .constant(""))
+    InsightsView(insightText: "")
 }

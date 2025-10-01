@@ -27,8 +27,17 @@ class SleepLogViewModel {
     }
     
     var isTimeConfigurationValid: Bool {
-        let difference = abs(bedtime.timeIntervalSince(bedtime))
-        return difference <= 24 * 60 * 60
+        let difference = combinedWakeTime.timeIntervalSince(combinedBedtime)
+        
+        if isNextDay {
+            return difference > 0 && difference <= 24 * 60 * 60
+        } else {
+            let calendar = Calendar.current
+            let bedtimeDay = calendar.startOfDay(for: combinedBedtime)
+            let wakeTimeDay = calendar.startOfDay(for: combinedWakeTime)
+            
+            return difference > 0 && bedtimeDay == wakeTimeDay
+        }
     }
     
     init(healthManager: HealthManager) {
@@ -41,7 +50,6 @@ class SleepLogViewModel {
             return
         }
         
-        // Set all properties to match the sleep log
         self.sleepDate = log.date
         self.bedtime = log.bedtime
         self.wakeTime = log.wakeTime
@@ -118,7 +126,7 @@ class SleepLogViewModel {
 extension SleepLogViewModel {
     var formattedSleepDate: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d, yyyy" // Example: Monday, Aug 31, 2025
+        formatter.dateFormat = "EEEE, MMM d, yyyy"
         return formatter.string(from: sleepDate)
     }
 }

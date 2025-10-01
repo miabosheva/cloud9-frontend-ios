@@ -6,87 +6,54 @@ struct AddSleepLogView: View {
     @Environment(\.dismiss) var dismiss
     
     @State var viewModel: SleepLogViewModel
-    
-    @State private var includeSleepTime = true
-    @State private var includeOutOfBedTime = true
+    @State private var formView: SleepLogFormView?
     
     init(healthManager: HealthManager) {
         _viewModel = State(initialValue: SleepLogViewModel(healthManager: healthManager))
     }
     
+    private var isFormValid: Bool {
+        formView?.isFormValid ?? false
+    }
+    
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Sleep Entry Date")) {
-                    DatePicker("Date", selection: $viewModel.sleepDate, displayedComponents: .date)
-                }
-                
-                Section(header: Text("Sleep Timeline")) {
-                    DatePicker("Bedtime", selection: $viewModel.bedtime, displayedComponents: .hourAndMinute)
-                    
-                    DatePicker("Wake Time", selection: $viewModel.wakeTime, displayedComponents: .hourAndMinute)
-                    
-                    Toggle("Wake time is next day", isOn: $viewModel.isNextDay)
-                    
-                    // Validation warning
-                    if !viewModel.isTimeConfigurationValid {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                            Text("Time configuration may not be logical")
-                                .font(.caption)
-                                .foregroundColor(.orange)
+            VStack(spacing: 0) {
+                SleepLogFormView(viewModel: $viewModel)
+                    .background(
+                        GeometryReader { geometry in
+                            Color.clear.onAppear {
+                                formView = SleepLogFormView(viewModel: $viewModel)
+                            }
                         }
-                    }
-                }
+                    )
                 
-                Section("Quality and Description") {
-                    Picker("Sleep Quality", selection: $viewModel.sleepQuality) {
-                        ForEach(SleepQuality.allCases, id: \.self) { quality in
-                            Text(quality.rawValue).tag(quality)
-                        }
+                // Save Button (Fixed at bottom)
+                VStack(spacing: 12) {
+                    if !isFormValid {
+                        Text("Please complete all required fields")
+                            .font(.caption)
+                            .foregroundColor(.red)
                     }
                     
-                    TextField("Describe your sleep...", text: $viewModel.description)
-                }
-                
-                Section(header: Text("Summary")) {
-                    Text("Duration: \(viewModel.formatSleepDuration())")
-                        .foregroundColor(.secondary)
-                    
-                    Text("Bedtime: \(viewModel.formattedDateTime(viewModel.combinedBedtime))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text("Wake Time: \(viewModel.formattedDateTime(viewModel.combinedWakeTime))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    // Show helpful context
-                    if viewModel.isNextDay {
-                        Text("💤 You'll sleep through midnight")
-                            .font(.caption2)
-                            .foregroundColor(.blue)
-                    } else {
-                        Text("☀️ Same-day sleep (nap or unusual schedule)")
-                            .font(.caption2)
-                            .foregroundColor(.blue)
-                    }
-                }
-                
-                Section {
-                    Button("Save Sleep Log") {
+                    Button {
                         saveSleepLog()
+                    } label: {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Save Sleep Log")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isFormValid ? Color.blue : Color.gray)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
                     }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .foregroundColor(.blue)
-                    .disabled(!viewModel.isTimeConfigurationValid)
+                    .disabled(!isFormValid)
                 }
-                
-                // Helper section
-                Section(footer: Text("💡 Tip: 'Next day' means you wake up the day after you went to bed. Most normal sleep spans midnight.")) {
-                    EmptyView()
-                }
+                .padding()
+                .background(Color(.systemGroupedBackground))
             }
             .navigationTitle("Add Sleep Log")
             .navigationBarTitleDisplayMode(.inline)
@@ -114,10 +81,10 @@ struct AddSleepLogView: View {
                     sleepQuality: viewModel.sleepQuality,
                     description: viewModel.description
                 )
+                dismiss()
             } catch {
                 errorManager.handle(error: error)
             }
-            dismiss()
         }
     }
 }
