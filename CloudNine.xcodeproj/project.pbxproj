@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0DBEF8172E081CC6009A33F8 /* CloudNineWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BD25D55F2E8B185500DE7968 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */; };
+		BD5A7D942E8DB66700CBE395 /* GoogleGenerativeAI in Frameworks */ = {isa = PBXBuildFile; productRef = BD5A7D932E8DB66700CBE395 /* GoogleGenerativeAI */; };
 		BD604CFE2E8B177E00C614C9 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BD604CFD2E8B177E00C614C9 /* WatchConnectivity.framework */; };
 		BDD297632E76D96B001DFF35 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297622E76D96B001DFF35 /* FirebaseCore */; };
 		BDD297652E76D982001DFF35 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = BDD297642E76D982001DFF35 /* FirebaseAuth */; };
@@ -95,6 +96,7 @@
 				BDD297632E76D96B001DFF35 /* FirebaseCore in Frameworks */,
 				BDD297672E76D989001DFF35 /* FirebaseFirestore in Frameworks */,
 				BDD297652E76D982001DFF35 /* FirebaseAuth in Frameworks */,
+				BD5A7D942E8DB66700CBE395 /* GoogleGenerativeAI in Frameworks */,
 				BDD297692E76D991001DFF35 /* FirebaseAnalytics in Frameworks */,
 				BD25D55F2E8B185500DE7968 /* WatchConnectivity.framework in Frameworks */,
 			);
@@ -165,6 +167,7 @@
 				BDD297642E76D982001DFF35 /* FirebaseAuth */,
 				BDD297662E76D989001DFF35 /* FirebaseFirestore */,
 				BDD297682E76D991001DFF35 /* FirebaseAnalytics */,
+				BD5A7D932E8DB66700CBE395 /* GoogleGenerativeAI */,
 			);
 			productName = CloudNine;
 			productReference = 0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */;
@@ -221,6 +224,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				BD5A7D922E8DB64B00CBE395 /* XCRemoteSwiftPackageReference "generative-ai-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0DBEF7C22E06CF6C009A33F8 /* Products */;
@@ -278,6 +282,8 @@
 /* Begin XCBuildConfiguration section */
 		0DBEF7CC2E06CF6E009A33F8 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0DBEF7C32E06CF6C009A33F8 /* CloudNine */;
+			baseConfigurationReferenceRelativePath = cloud9.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -343,6 +349,8 @@
 		};
 		0DBEF7CD2E06CF6E009A33F8 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0DBEF7C32E06CF6C009A33F8 /* CloudNine */;
+			baseConfigurationReferenceRelativePath = cloud9.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -401,6 +409,8 @@
 		};
 		0DBEF7CF2E06CF6E009A33F8 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0DBEF7C32E06CF6C009A33F8 /* CloudNine */;
+			baseConfigurationReferenceRelativePath = cloud9.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -417,6 +427,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -435,6 +446,8 @@
 		};
 		0DBEF7D02E06CF6E009A33F8 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0DBEF7C32E06CF6C009A33F8 /* CloudNine */;
+			baseConfigurationReferenceRelativePath = cloud9.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -451,6 +464,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
@@ -469,6 +483,8 @@
 		};
 		0DBEF8192E081CC6009A33F8 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0DBEF7C32E06CF6C009A33F8 /* CloudNine */;
+			baseConfigurationReferenceRelativePath = cloud9.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -503,6 +519,8 @@
 		};
 		0DBEF81A2E081CC6009A33F8 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 0DBEF7C32E06CF6C009A33F8 /* CloudNine */;
+			baseConfigurationReferenceRelativePath = cloud9.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -568,6 +586,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		BD5A7D922E8DB64B00CBE395 /* XCRemoteSwiftPackageReference "generative-ai-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/generative-ai-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.5.6;
+			};
+		};
 		BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
@@ -579,6 +605,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		BD5A7D932E8DB66700CBE395 /* GoogleGenerativeAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BD5A7D922E8DB64B00CBE395 /* XCRemoteSwiftPackageReference "generative-ai-swift" */;
+			productName = GoogleGenerativeAI;
+		};
 		BDD297622E76D96B001DFF35 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BDD2967D2E758450001DFF35 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

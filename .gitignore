@@ -30,6 +30,7 @@
 *.orig
 *.hmap
 *.modulemap
+*.xcconfig
 
 # Build products
 build/
@@ -90,7 +91,7 @@ Desktop.ini
 # Files that might contain API keys, credentials, or other sensitive data.
 # Make sure these are NOT committed.
 # secrets.plist
-# .env
+.env
 
 # IDE specific files (if not Xcode)
 #

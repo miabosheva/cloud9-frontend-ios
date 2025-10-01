@@ -9,8 +9,13 @@ class SleepLogViewModel {
     var sleepQuality: SleepQuality = .fair
     var description: String = ""
     var isNextDay: Bool = true
+    var sleepLog: SleepData?
+    
+    var isLoading = false
     
     private var healthManager: HealthManager
+    private var geminiService = GeminiService()
+    private var userManager = UserManager()
     
     var combinedBedtime: Date {
         combineDateAndTime(date: sleepDate, time: bedtime)
@@ -42,6 +47,7 @@ class SleepLogViewModel {
         self.wakeTime = log.wakeTime
         self.sleepQuality = log.sleepQuality ?? .fair
         self.description = log.description ?? ""
+        self.sleepLog = log
     }
     
     private func combineDateAndTime(date: Date, time: Date) -> Date {
@@ -92,6 +98,20 @@ class SleepLogViewModel {
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+    
+    func generateInsight() async throws -> String {
+        defer { isLoading = false }
+        do {
+            isLoading = true
+            let userInfo = try await userManager.fetchUserInfo()
+            guard let sleepLog else { throw HealthError.failedToCreateType }
+            
+            let insight = try await geminiService.analyzeDream(userInfo: userInfo, sleepData: sleepLog)
+            return insight
+        } catch {
+            throw error
+        }
     }
 }
 
