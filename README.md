@@ -1,6 +1,6 @@
 # Cloud9 – Sleep Management & Optimization System
 
-**Cloud9** is a comprehensive sleep management system designed to track, analyze, and optimize sleep patterns. The system consists of an iOS application and a watchOS application, synchronized through Apple HealthKit and a Firebase backend.
+**Cloud9** is a comprehensive sleep management solution designed to help you understand and improve your sleep quality. Built for iOS and Apple Watch, it seamlessly tracks your sleep patterns, provides personalized insights, and helps you maintain healthy sleep habits through intelligent analysis and recommendations.
 
 ---
 
@@ -8,42 +8,56 @@
 1. [Overview](#overview)  
 2. [Features](#features)  
 3. [Architecture](#architecture)  
-4. [Installation](#installation)  
+4. [Installation](#installation)
 
 ---
 
 ## Overview
-Cloud9 enables users to:
-- Track sleep manually or via Apple Watch sensors.  
-- Calculate sleep debt and receive personalized recommendations.  
-- Visualize sleep patterns through interactive charts.  
-- Sync sleep logs across iOS and watchOS devices using HealthKit and Firebase.  
 
-The system is built using Swift and SwiftUI for iOS/watchOS, with Firebase as a serverless backend for authentication, storage, and analytics.
+Cloud9 empowers you to take control of your sleep health by:
+
+- **Tracking your sleep** – Record sleep sessions manually or automatically through Apple Watch sensors
+- **Understanding your patterns** – Calculate sleep debt and receive tailored recommendations based on your unique sleep needs
+- **Visualizing your progress** – View detailed sleep analytics through intuitive, interactive charts
+- **Staying synchronized** – Seamlessly sync your sleep data across all your devices using Apple HealthKit and Firebase
+
+Built with modern Swift and SwiftUI technologies, Cloud9 leverages Firebase as a robust serverless backend to provide authentication, cloud storage, and real-time analytics across your devices.
 
 ---
 
 ## Features
-| Feature | iOS App | watchOS App | Planned / Future |
-|---------|---------|-------------|----------------|
-| Sleep Tracking | ✅ | ❌ | – |
-| Automatic Sleep Detection | ❌ | ✅ | – |
-| Heart Rate Monitoring | ✅ | ✅ | – |
-| Sleep Debt Calculation | ✅ | ❌ | – |
-| AI-Based Insights | ✅ | ❌ | – |
-| Data Visualization | ✅ | ✅ | – |
-| Notifications | ❌ | ❌ | ✅ |
-| Sign In with Apple | ❌ | ❌ | ✅ |
+
+The following table outlines current capabilities and planned enhancements:
+
+| Feature | iOS App | watchOS App | Coming Soon |
+|---------|---------|-------------|-------------|
+| Manual Sleep Tracking | Yes | No | – |
+| Automatic Sleep Detection | No | Yes | – |
+| Heart Rate Monitoring | Yes | Yes | – |
+| Sleep Debt Calculation | Yes | No | – |
+| AI-Powered Sleep Insights | Yes | No | – |
+| Interactive Data Visualization | Yes | Yes | – |
+| Smart Notifications | No | No | Planned |
+| Sign In with Apple | No | No | Planned |
 
 ---
 
 ## Architecture
-Cloud9 uses a multi-tier architecture:  
-1. **iOS App** – Primary UI, data visualization, state management via MVVM.  
-2. **watchOS App** – Sleep tracking interface, heart rate monitoring, local data buffering.  
-3. **Firebase Backend** – Firestore for data storage, Authentication for login, Cloud Functions for analytics, and optional Cloud Messaging for notifications.  
+
+Cloud9 is built on a modern, scalable multi-tier architecture:
+
+**iOS Application** – Serves as the primary interface with rich data visualizations and follows the MVVM (Model-View-ViewModel) pattern for clean, maintainable code structure
+
+**watchOS Application** – Provides convenient sleep tracking directly from your wrist, monitors heart rate metrics, and buffers data locally for reliable syncing
+
+**Firebase Backend** – Powers the entire ecosystem with Firestore for cloud data storage, Firebase Authentication for secure user management, Cloud Functions for advanced analytics processing, and optional Cloud Messaging for push notifications
+
+---
 
 ## Installation
+
+Getting started with Cloud9 is straightforward:
+
 1. Clone the repository:  
-   ```bash
+```bash
    git clone https://github.com/yourusername/cloud9.git
