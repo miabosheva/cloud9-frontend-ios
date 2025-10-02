@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HealthMetricsGrid: View {
     let healthManager: HealthManager
-    let watchConnector: WatchConnector
+    let watchConnector: WatchConnectivityManager
     @Binding var showingSleepDebtDetails: Bool
     @Binding var showingInfoAlert: Bool
     
@@ -46,7 +46,7 @@ struct HealthMetricsGrid: View {
 #Preview {
     HealthMetricsGrid(
         healthManager: HealthManager(),
-        watchConnector: WatchConnector(),
+        watchConnector: WatchConnectivityManager(),
         showingSleepDebtDetails: .constant(false),
         showingInfoAlert: .constant(false)
     )

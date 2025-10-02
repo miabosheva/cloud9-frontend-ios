@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RealTimeHeartRateCard: View {
-    let watchConnector: WatchConnector
+    let watchConnector: WatchConnectivityManager
     @Binding var showingInfoAlert: Bool
     @State private var animate = false
     
@@ -109,7 +109,7 @@ struct RealTimeHeartRateCard: View {
 #Preview {
     HealthMetricsGrid(
         healthManager: HealthManager(),
-        watchConnector: WatchConnector(),
+        watchConnector: WatchConnectivityManager(),
         showingSleepDebtDetails: .constant(false),
         showingInfoAlert: .constant(false)
     )

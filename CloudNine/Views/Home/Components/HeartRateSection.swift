@@ -4,7 +4,7 @@ import Charts
 struct HeartRateSection: View {
     let healthManager: HealthManager
     let errorManager: ErrorManager
-    let watchConnector: WatchConnector
+    let watchConnector: WatchConnectivityManager
     @Binding var heartRateFilter: HeartFilter
     
     var body: some View {

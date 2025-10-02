@@ -1,6 +1,7 @@
 import Foundation
 import HealthKit
 import WatchConnectivity
+import SwiftUI
 
 class WorkoutManager: NSObject, ObservableObject {
     var selectedWorkout: HKWorkoutActivityType = .other
@@ -20,6 +21,10 @@ class WorkoutManager: NSObject, ObservableObject {
     @Published var running = false
     @Published var heartRate: Double = 0
     @Published var statusMessage: String = ""
+    
+    // Sleep data from iPhone
+    @Published var sleepDebtData: SleepDebtData?
+    @Published var sleepQualityData: SleepQualityData?
     
     override init() {
         super.init()
@@ -105,6 +110,44 @@ class WorkoutManager: NSObject, ObservableObject {
             }
         }
     }
+    
+    // Parse sleep data from iPhone
+    private func parseSleepData(from context: [String: Any]) {
+        // Parse Sleep Debt Data
+        if let debtDict = context["sleepDebt"] as? [String: Any] {
+            self.sleepDebtData = SleepDebtData(
+                totalDebt: debtDict["totalDebt"] as? String ?? "N/A",
+                severity: debtDict["severity"] as? String ?? "Unknown",
+                severityIcon: debtDict["severityIcon"] as? String ?? "moon.fill",
+                severityColor: colorFromString(debtDict["severityColor"] as? String),
+                efficiency: debtDict["efficiency"] as? Int ?? 0,
+                efficiencyColor: colorFromString(debtDict["efficiencyColor"] as? String),
+                dataQualityGrade: debtDict["dataQualityGrade"] as? String ?? "N/A",
+                dataQualityColor: colorFromString(debtDict["dataQualityColor"] as? String),
+                missingDaysCount: debtDict["missingDaysCount"] as? Int ?? 0
+            )
+        }
+        
+        // Parse Sleep Quality Data
+        if let qualityDict = context["sleepQuality"] as? [String: Any] {
+            self.sleepQualityData = SleepQualityData(
+                duration: qualityDict["duration"] as? String ?? "N/A",
+                quality: qualityDict["quality"] as? String ?? "N/A"
+            )
+        }
+    }
+    
+    private func colorFromString(_ colorString: String?) -> Color {
+        switch colorString {
+        case "green": return .green
+        case "yellow": return .yellow
+        case "orange": return .orange
+        case "red": return .red
+        case "blue": return .blue
+        case "indigo": return .indigo
+        default: return .gray
+        }
+    }
 }
 
 extension WorkoutManager: HKWorkoutSessionDelegate {
@@ -159,7 +202,11 @@ extension WorkoutManager: HKLiveWorkoutBuilderDelegate {
 
 extension WorkoutManager: WCSessionDelegate {
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        // Session activated
+        if let error = error {
+            print("WCSession activation failed: \(error.localizedDescription)")
+        } else {
+            print("WCSession activated successfully")
+        }
     }
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
@@ -176,6 +223,14 @@ extension WorkoutManager: WCSessionDelegate {
                     replyHandler(["status": "unknown action"])
                 }
             }
+        }
+    }
+    
+    // NEW: Receive application context updates from iPhone
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
+        DispatchQueue.main.async {
+            self.parseSleepData(from: applicationContext)
+            print("Received sleep data from iPhone")
         }
     }
 }

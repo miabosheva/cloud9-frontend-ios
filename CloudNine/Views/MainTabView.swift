@@ -4,7 +4,7 @@ import HealthKit
 struct MainTabView: View {
     
     @State private var healthManager = HealthManager()
-    @State private var watchConnector = WatchConnector()
+    @State private var watchConnector = WatchConnectivityManager()
     
     var body: some View {
         Group {

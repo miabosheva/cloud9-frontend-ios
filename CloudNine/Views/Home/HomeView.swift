@@ -7,7 +7,7 @@ struct HomeView: View {
     @Environment(ErrorManager.self) var errorManager
     @State var navigationManager = NavigationManager()
     @State var viewModel = HomeViewModel()
-    @Bindable var watchConnector: WatchConnector
+    @Bindable var watchConnector: WatchConnectivityManager
     
     @State private var showingAddSleep = false
     @State private var heartRateFilter: HeartFilter = .today
@@ -18,7 +18,7 @@ struct HomeView: View {
     
     private var userManager = UserManager()
     
-    init(watchConnector: WatchConnector) {
+    init(watchConnector: WatchConnectivityManager) {
         self.watchConnector = watchConnector
     }
     
@@ -81,10 +81,25 @@ struct HomeView: View {
     // MARK: - Data Loading
     private func loadData() async {
         do {
+            let calendar = Calendar.current
+            let day = Date.now
+            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: day)!
+            
+            let todaysSleep = healthManager.sleepData.filter { data in
+                calendar.isDate(data.date, inSameDayAs: yesterday)
+            }
+            
             try await healthManager.requestPermissions()
             try await healthManager.loadInitialData()
             userInfo = try await userManager.fetchUserInfo()
             healthManager.calculateSleepDept(user: userInfo)
+            if let sleepDeptResult = healthManager.sleepDeptResult {
+                watchConnector.sendAllSleepData(
+                    sleepDeptResult,
+                    duration: todaysSleep.totalFormattedDuration,
+                    quality: healthManager.sleepData.last?.sleepQuality?.rawValue
+                )
+            }
         } catch {
             errorManager.handle(error: error)
         }
@@ -92,7 +107,7 @@ struct HomeView: View {
 }
 
 #Preview {
-    HomeView(watchConnector: WatchConnector())
+    HomeView(watchConnector: WatchConnectivityManager())
         .environment(HealthManager())
         .environment(ErrorManager())
 }
