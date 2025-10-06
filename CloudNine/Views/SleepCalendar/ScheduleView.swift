@@ -19,12 +19,6 @@ struct ScheduleView: View {
                 CalendarView { selectedDate in
                     self.selectedSessionDate = selectedDate
                 }
-                .padding(8)
-                .background {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(.clear)
-                        .stroke(Color.accentColor.opacity(0.5), lineWidth: 3)
-                }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 

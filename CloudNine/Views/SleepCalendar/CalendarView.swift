@@ -7,9 +7,10 @@ struct CalendarView: View {
     @State private var selectedDate = Date.now
     @State private var days: [Date] = []
     @State private var viewModel = CalendarViewModel()
+    @State private var rowHeights: [Int: CGFloat] = [:]
     
     let daysOfWeek = Date.capitalizedFirstLettersOfWeekdays
-    let columns = Array(repeating: GridItem(.flexible()), count: 7)
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 7)
     
     var onDateSelected: (Date) -> Void
     
@@ -51,41 +52,26 @@ struct CalendarView: View {
             
             // Grid of days
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(days, id: \.self) { day in
-                    Button {
-                        if day <= Date.now.startOfDay && day.monthInt <= currentMonth.monthInt {
-                            selectedDate = day
-                            onDateSelected(selectedDate)
-                        }
-                    } label: {
-                        VStack {
-                            Text(day.formatted(.dateTime.day()))
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(foregroundStyle(for: day))
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                            
-                            ForEach(viewModel.entriesFromDate(sleepData: healthManager.sleepData, day: day)) { log in
-                                Circle()
-                                    .fill(log.qualityColor)
-                                    .overlay {
-                                        Text("\(log.formattedDuration)")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(.white)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
+                ForEach(Array(days.enumerated()), id: \.element) { index, day in
+                    let rowIndex = index / 7
+                    let entries = viewModel.entriesFromDate(sleepData: healthManager.sleepData, day: day)
+                    
+                    DayCell(
+                        day: day,
+                        currentMonth: currentMonth,
+                        selectedDate: selectedDate,
+                        entries: entries,
+                        rowHeight: rowHeights[rowIndex],
+                        onTap: {
+                            if day <= Date.now.startOfDay && day.monthInt <= currentMonth.monthInt {
+                                selectedDate = day
+                                onDateSelected(selectedDate)
                             }
-                            .padding(4)
                         }
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.accentColor.opacity(0.03))
-                                .stroke(
-                                    day.formattedDate == selectedDate.formattedDate ? Color.accentColor : .clear,
-                                    lineWidth: 2
-                                )
-                        )
+                    )
+                    .onAppear {
+                        updateRowHeight(for: rowIndex, entries: entries)
                     }
-                    .disabled(day > Date.now.startOfDay || day.monthInt > currentMonth.monthInt)
                 }
             }
         }
@@ -94,13 +80,68 @@ struct CalendarView: View {
             updateDays()
             onDateSelected(selectedDate)
         }
+        .padding(8)
+        .background {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.clear)
+                .stroke(Color.accentColor.opacity(0.5), lineWidth: 3)
+        }
     }
     
     private func updateDays() {
         days = currentMonth.calendarDisplayDays
+        recalculateAllRowHeights()
     }
     
-    private func foregroundStyle(for day: Date) -> Color {
+    private func updateRowHeight(for rowIndex: Int, entries: [SleepData]) {
+        let calculatedHeight = calculateCellHeight(for: entries.count)
+        
+        if let currentHeight = rowHeights[rowIndex] {
+            rowHeights[rowIndex] = max(currentHeight, calculatedHeight)
+        } else {
+            rowHeights[rowIndex] = calculatedHeight
+        }
+    }
+    
+    private func recalculateAllRowHeights() {
+        rowHeights.removeAll()
+        
+        for (index, day) in days.enumerated() {
+            let rowIndex = index / 7
+            let entries = viewModel.entriesFromDate(sleepData: healthManager.sleepData, day: day)
+            updateRowHeight(for: rowIndex, entries: entries)
+        }
+    }
+    
+    private func calculateCellHeight(for entryCount: Int) -> CGFloat {
+        let baseHeight: CGFloat = 48
+        let circleHeight: CGFloat = 30
+        let spacing: CGFloat = 4
+        let bottomPadding: CGFloat = 8
+        
+        if entryCount == 0 {
+            return baseHeight
+        }
+        
+        let entriesHeight = CGFloat(entryCount) * circleHeight + CGFloat(entryCount - 1) * spacing
+        return baseHeight + entriesHeight + spacing + bottomPadding
+    }
+}
+
+// MARK: - Day Cell Component
+struct DayCell: View {
+    let day: Date
+    let currentMonth: Date
+    let selectedDate: Date
+    let entries: [SleepData]
+    let rowHeight: CGFloat?
+    let onTap: () -> Void
+    
+    private var isDisabled: Bool {
+        day > Date.now.startOfDay || day.monthInt > currentMonth.monthInt
+    }
+    
+    private var foregroundColor: Color {
         let isDifferentMonth = day.monthInt != currentMonth.monthInt
         let isSelectedDate = day.formattedDate == selectedDate.formattedDate
         let isPastDate = day <= Date.now.startOfDay
@@ -112,6 +153,52 @@ struct CalendarView: View {
         } else {
             return .primary.opacity(0.3)
         }
+    }
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 4) {
+                Text(day.formatted(.dateTime.day()))
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(foregroundColor)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+                
+                if !entries.isEmpty {
+                    VStack(spacing: 4) {
+                        ForEach(entries) { log in
+                            Circle()
+                                .fill(log.qualityColor)
+                                .frame(width: 30, height: 30)
+                                .overlay {
+                                    Text("\(log.formattedDuration)")
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.5)
+                                }
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+                
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, minHeight: rowHeight ?? 48, maxHeight: rowHeight ?? .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.accentColor.opacity(0.03))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                day.formattedDate == selectedDate.formattedDate ? Color.accentColor : .clear,
+                                lineWidth: 2
+                            )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
     }
 }
 

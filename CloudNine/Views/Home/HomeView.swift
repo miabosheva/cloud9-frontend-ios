@@ -15,7 +15,6 @@ struct HomeView: View {
     @State private var showingSleepDebtDetails = false
     @State private var userInfo = UserInfo()
     @State var showingInfoAlert: Bool = false
-    @State var isLoading = true
     
     private var userManager = UserManager()
     
@@ -25,45 +24,39 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack(path: $navigationManager.path) {
-            ZStack {
-                if isLoading {
-                    LoadingView()
-                } else {
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            HeaderSection(
-                                userInfo: userInfo,
-                                onProfileTap: { navigationManager.navigate(to: .profile) }
-                            )
-                            
-                            HealthMetricsGrid(
-                                watchConnector: watchConnector,
-                                showingSleepDebtDetails: $showingSleepDebtDetails,
-                                showingInfoAlert: $showingInfoAlert
-                            )
-                            
-                            SleepInsightsSection(
-                                healthManager: healthManager,
-                                errorManager: errorManager,
-                                sleepFilter: $sleepFilter
-                            )
-                            .padding(.horizontal)
-                            
-                            HeartRateSection(
-                                healthManager: healthManager,
-                                errorManager: errorManager,
-                                watchConnector: watchConnector,
-                                heartRateFilter: $heartRateFilter
-                            )
-                            .padding(.horizontal)
-                        }
-                        .padding(.bottom, 30)
-                    }
-                    .refreshable {
-                        Task {
-                            await fetchData()
-                        }
-                    }
+            ScrollView {
+                VStack(spacing: 24) {
+                    HeaderSection(
+                        userInfo: userInfo,
+                        onProfileTap: { navigationManager.navigate(to: .profile) }
+                    )
+                    
+                    HealthMetricsGrid(
+                        watchConnector: watchConnector,
+                        showingSleepDebtDetails: $showingSleepDebtDetails,
+                        showingInfoAlert: $showingInfoAlert
+                    )
+                    
+                    SleepInsightsSection(
+                        healthManager: healthManager,
+                        errorManager: errorManager,
+                        sleepFilter: $sleepFilter
+                    )
+                    .padding(.horizontal)
+                    
+                    HeartRateSection(
+                        healthManager: healthManager,
+                        errorManager: errorManager,
+                        watchConnector: watchConnector,
+                        heartRateFilter: $heartRateFilter
+                    )
+                    .padding(.horizontal)
+                }
+                .padding(.bottom, 30)
+            }
+            .refreshable {
+                Task {
+                    await fetchData()
                 }
             }
             .background(
@@ -102,7 +95,6 @@ struct HomeView: View {
     // MARK: - Data Loading
     private func fetchData() async {
         do {
-            isLoading = true
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: Date.now)
             
@@ -122,10 +114,7 @@ struct HomeView: View {
                     quality: todaysSleep.first?.sleepQuality?.rawValue
                 )
             }
-            
-            isLoading = false
         } catch {
-            isLoading = false
             errorManager.handle(error: error)
         }
     }
