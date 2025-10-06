@@ -9,7 +9,7 @@ struct ScheduleView: View {
     
     var matchingSleepData: [SleepData] {
         return healthManager.sleepData.filter { data in
-            calendar.isDate(data.date, inSameDayAs: selectedSessionDate)
+            calendar.isDate(data.wakeTime, inSameDayAs: selectedSessionDate)
         }
     }
     

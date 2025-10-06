@@ -18,22 +18,31 @@ struct SleepQualityCard: View {
                     .foregroundColor(.secondary)
             }
             
-            if let duration, let quality {
+            if let duration {
                 Text(duration)
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
                 
-                VStack(spacing: 6) {
-                    Text(quality)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Text("Sleep Quality")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if let quality {
+                    VStack(spacing: 6) {
+                        Text(quality)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        Text("Sleep Quality")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 8)
+                } else {
+                    VStack(spacing: 6) {
+                        Text("Sleep Quality Not Available")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 8)
                 }
-                .padding(.bottom, 8)
             } else {
                 Text("No Entry Yet")
                     .fontWeight(.medium)

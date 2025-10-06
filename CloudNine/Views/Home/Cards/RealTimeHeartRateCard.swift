@@ -108,9 +108,9 @@ struct RealTimeHeartRateCard: View {
 
 #Preview {
     HealthMetricsGrid(
-        healthManager: HealthManager(),
         watchConnector: WatchConnectivityManager(),
         showingSleepDebtDetails: .constant(false),
         showingInfoAlert: .constant(false)
     )
+    .environment(HealthManager())
 }

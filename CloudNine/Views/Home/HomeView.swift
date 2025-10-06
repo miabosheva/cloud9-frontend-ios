@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var showingSleepDebtDetails = false
     @State private var userInfo = UserInfo()
     @State var showingInfoAlert: Bool = false
+    @State var isLoading = true
     
     private var userManager = UserManager()
     
@@ -24,36 +25,46 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack(path: $navigationManager.path) {
-            ScrollView {
-                VStack(spacing: 24) {
-                    HeaderSection(
-                        userInfo: userInfo,
-                        onProfileTap: { navigationManager.navigate(to: .profile) }
-                    )
-                    
-                    HealthMetricsGrid(
-                        healthManager: healthManager,
-                        watchConnector: watchConnector,
-                        showingSleepDebtDetails: $showingSleepDebtDetails,
-                        showingInfoAlert: $showingInfoAlert
-                    )
-                    
-                    SleepInsightsSection(
-                        healthManager: healthManager,
-                        errorManager: errorManager,
-                        sleepFilter: $sleepFilter
-                    )
-                    .padding(.horizontal)
-                    
-                    HeartRateSection(
-                        healthManager: healthManager,
-                        errorManager: errorManager,
-                        watchConnector: watchConnector,
-                        heartRateFilter: $heartRateFilter
-                    )
-                    .padding(.horizontal)
+            ZStack {
+                if isLoading {
+                    LoadingView()
+                } else {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            HeaderSection(
+                                userInfo: userInfo,
+                                onProfileTap: { navigationManager.navigate(to: .profile) }
+                            )
+                            
+                            HealthMetricsGrid(
+                                watchConnector: watchConnector,
+                                showingSleepDebtDetails: $showingSleepDebtDetails,
+                                showingInfoAlert: $showingInfoAlert
+                            )
+                            
+                            SleepInsightsSection(
+                                healthManager: healthManager,
+                                errorManager: errorManager,
+                                sleepFilter: $sleepFilter
+                            )
+                            .padding(.horizontal)
+                            
+                            HeartRateSection(
+                                healthManager: healthManager,
+                                errorManager: errorManager,
+                                watchConnector: watchConnector,
+                                heartRateFilter: $heartRateFilter
+                            )
+                            .padding(.horizontal)
+                        }
+                        .padding(.bottom, 30)
+                    }
+                    .refreshable {
+                        Task {
+                            await fetchData()
+                        }
+                    }
                 }
-                .padding(.bottom, 30)
             }
             .background(
                 LinearGradient(
@@ -78,29 +89,43 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Data Loading
+    // MARK: - Initial Data Loading
     private func loadData() async {
         do {
+            await fetchData()
+            try await healthManager.requestPermissions()
+        } catch {
+            errorManager.handle(error: error)
+        }
+    }
+    
+    // MARK: - Data Loading
+    private func fetchData() async {
+        do {
+            isLoading = true
             let calendar = Calendar.current
-            let day = Date.now
-            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: day)!
+            let today = calendar.startOfDay(for: Date.now)
             
+            // Get today's sleep (the sleep you woke up from this morning)
             let todaysSleep = healthManager.sleepData.filter { data in
-                calendar.isDate(data.date, inSameDayAs: yesterday)
+                calendar.isDate(data.date, inSameDayAs: today)
             }
             
-            try await healthManager.requestPermissions()
             try await healthManager.loadInitialData()
             userInfo = try await userManager.fetchUserInfo()
             healthManager.calculateSleepDept(user: userInfo)
+            
             if let sleepDeptResult = healthManager.sleepDeptResult {
                 watchConnector.sendAllSleepData(
                     sleepDeptResult,
                     duration: todaysSleep.totalFormattedDuration,
-                    quality: healthManager.sleepData.last?.sleepQuality?.rawValue
+                    quality: todaysSleep.first?.sleepQuality?.rawValue
                 )
             }
+            
+            isLoading = false
         } catch {
+            isLoading = false
             errorManager.handle(error: error)
         }
     }

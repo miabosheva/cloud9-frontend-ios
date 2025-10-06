@@ -1,27 +1,26 @@
 import SwiftUI
 
 struct HealthMetricsGrid: View {
-    let healthManager: HealthManager
+    @Environment(HealthManager.self) var healthManager
     let watchConnector: WatchConnectivityManager
     @Binding var showingSleepDebtDetails: Bool
     @Binding var showingInfoAlert: Bool
     
-    var sleepFromToday: [SleepData] {
+    var sleepFromLastNight: [SleepData] {
         let calendar = Calendar.current
-        let day = Date.now
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: day)!
+        let today = Date.now
         
         return healthManager.sleepData.filter { data in
-            calendar.isDate(data.date, inSameDayAs: yesterday)
+            calendar.isDate(data.wakeTime, inSameDayAs: today)
         }
     }
     
     var duration: String? {
-        return sleepFromToday.totalFormattedDuration
+        return sleepFromLastNight.totalFormattedDuration
     }
     
     var quality: String? {
-        return sleepFromToday.medianQuality?.rawValue
+        return sleepFromLastNight.medianQuality?.rawValue
     }
     
     var body: some View {
@@ -45,9 +44,9 @@ struct HealthMetricsGrid: View {
 
 #Preview {
     HealthMetricsGrid(
-        healthManager: HealthManager(),
         watchConnector: WatchConnectivityManager(),
         showingSleepDebtDetails: .constant(false),
         showingInfoAlert: .constant(false)
     )
+    .environment(HealthManager())
 }

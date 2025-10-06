@@ -433,22 +433,21 @@ extension HealthManager {
     private func fillMissingDaysWithSchedule(_ logs: [SleepData]) throws -> [SleepData] {
         var result = logs
         let calendar = Calendar.current
-        let endDate = Date()
+        let today = calendar.startOfDay(for: Date())
         
         let existingDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
         
         let userInfoPerssisted = try? userPerssistanceService.loadUserInfo()
         let userInfo = userInfoPerssisted ?? UserInfo()
-        for offset in 0..<30 {
-            guard let day = calendar.date(byAdding: .day, value: -offset, to: endDate) else { continue }
+        
+        for offset in 1..<30 {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
             let startOfDay = calendar.startOfDay(for: day)
             
             if !existingDays.contains(startOfDay) {
-                // Combine date with user's bedtime and wakeTime
                 let bedtime = combine(date: startOfDay, time: userInfo.bedtime)
                 var wakeTime = combine(date: startOfDay, time: userInfo.wakeTime)
                 
-                // If wakeTime <= bedtime, add one day
                 if wakeTime <= bedtime {
                     wakeTime = calendar.date(byAdding: .day, value: 1, to: wakeTime)!
                 }

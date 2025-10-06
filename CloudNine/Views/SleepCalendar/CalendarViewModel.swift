@@ -8,7 +8,7 @@ class CalendarViewModel {
         let calendar = Calendar.current
         
         return sleepData.filter { data in
-            calendar.isDate(data.date, inSameDayAs: day)
+            calendar.isDate(data.wakeTime, inSameDayAs: day)
         }
     }
 }
