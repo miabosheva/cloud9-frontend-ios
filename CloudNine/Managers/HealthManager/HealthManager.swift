@@ -17,11 +17,11 @@ class HealthManager: NSObject {
     var sleepChartData: [SleepChartData] = []
     var heartRateData: [HeartRateData] = []
     var sleepData: [SleepData] = []
-    var sleepDeptResult: AutomatedSleepDebtResult?
+    var sleepDebtResult: AutomatedSleepDebtResult?
     var error: Error?
     
     var samplesBySessionId: [String: [HKCategorySample]] = [:]
-    var userPerssistanceService: UserPerssistanceServiceProtocol = UserPersistenceService()
+    var userPersistenceService: UserPersistenceServiceProtocol = UserPersistenceService()
     
     var authorizationStatus: AuthorizationStatus = .unknown
     
@@ -31,21 +31,23 @@ class HealthManager: NSObject {
             return
         }
         
-        let typesToShare: Set<HKSampleType> = [
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
-        ]
+        guard let sleepAnalysisType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
+              let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate),
+              let bodyTemperatureType = HKObjectType.quantityType(forIdentifier: .bodyTemperature) else {
+            await MainActor.run {
+                self.authorizationStatus = .denied
+                self.error = HealthError.failedToCreateType
+            }
+            return
+        }
         
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-            HKObjectType.quantityType(forIdentifier: .heartRate)!,
-            HKObjectType.quantityType(forIdentifier: .bodyTemperature)!
-        ]
+        let typesToShare: Set<HKSampleType> = [sleepAnalysisType]
+        let typesToRead: Set<HKObjectType> = [sleepAnalysisType, heartRateType, bodyTemperatureType]
         
         do {
             try await healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead)
             
-            let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
-            let status = healthStore.authorizationStatus(for: sleepType)
+            let status = healthStore.authorizationStatus(for: sleepAnalysisType)
             
             await MainActor.run {
                 if status == .sharingAuthorized {
@@ -68,7 +70,7 @@ class HealthManager: NSObject {
         loadSleepSamplesForChart(filter: .thisWeek)
     }
     
-    func calculateSleepDept(user: UserInfo) {
+    func calculateSleepDebt(user: UserInfo) {
         var settings = AutomatedSleepDebtCalculator.AutomationSettings()
         settings.primaryGoal = user.trackingGoal
         settings.adaptiveStrategy = true
@@ -81,6 +83,6 @@ class HealthManager: NSObject {
 
         // One-line automated calculation
         let result = automatedCalculator.automaticCalculateDebt(sleepData: sleepData)
-        self.sleepDeptResult = result
+        self.sleepDebtResult = result
     }
 }

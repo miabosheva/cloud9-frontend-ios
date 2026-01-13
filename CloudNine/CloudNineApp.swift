@@ -1,26 +1,14 @@
 import SwiftUI
-import SwiftData
 import FirebaseCore
 
 @main
 struct CloudNineApp: App {
-//    var sharedModelContainer: ModelContainer = {
-//        let schema = Schema([
-//            Item.self,
-//        ])
-//        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-//        
-//        do {
-//            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-//        } catch {
-//            fatalError("Could not create ModelContainer: \(error)")
-//        }
-//    }()
-    
     init() {
         guard let filePath = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
               let options = FirebaseOptions(contentsOfFile: filePath) else {
-            fatalError("Failed to setup firebase")
+            // In production, consider logging this error and showing a user-friendly message
+            // For now, fatalError is appropriate as Firebase is required for the app to function
+            fatalError("Failed to setup firebase: GoogleService-Info.plist not found or invalid")
         }
         
         FirebaseApp.configure(options: options)
@@ -30,6 +18,5 @@ struct CloudNineApp: App {
         WindowGroup {
             AppRootView()
         }
-//        .modelContainer(sharedModelContainer)
     }
 }

@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 @Observable
 class HomeViewModel {
-    @ObservationIgnored private let service: UserPerssistanceServiceProtocol = UserPersistenceService()
+    @ObservationIgnored private let service: UserPersistenceServiceProtocol = UserPersistenceService()
     
     func saveUserInfo(_ userInfo: UserInfo) async throws {
         try await service.saveUserInfo(userInfo)

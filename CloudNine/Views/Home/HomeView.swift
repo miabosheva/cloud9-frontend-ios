@@ -74,7 +74,7 @@ struct HomeView: View {
                 Text("To begin a measurement, please open the app on your Apple Watch.")
             }
             .sheet(isPresented: $showingSleepDebtDetails) {
-                SleepDebtDetailView(sleepDebtResult: healthManager.sleepDeptResult)
+                SleepDebtDetailView(sleepDebtResult: healthManager.sleepDebtResult)
             }
             .task {
                 await fetchData()
@@ -96,11 +96,11 @@ struct HomeView: View {
             
             try await healthManager.loadInitialData()
             userInfo = try await userManager.fetchUserInfo()
-            healthManager.calculateSleepDept(user: userInfo)
+            healthManager.calculateSleepDebt(user: userInfo)
             
-            if let sleepDeptResult = healthManager.sleepDeptResult {
+            if let sleepDebtResult = healthManager.sleepDebtResult {
                 watchConnector.sendAllSleepData(
-                    sleepDeptResult,
+                    sleepDebtResult,
                     duration: todaysSleep.totalFormattedDuration,
                     quality: todaysSleep.first?.sleepQuality?.rawValue
                 )

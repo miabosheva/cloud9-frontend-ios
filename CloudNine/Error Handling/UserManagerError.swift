@@ -1,6 +1,6 @@
 import Foundation
 
-enum UserManagerError: Error {
+enum UserManagerError: Error, LocalizedError {
     case userNotAuthenticated
     case userInfoNotFound
     case invalidUserInfoData
@@ -11,7 +11,7 @@ enum UserManagerError: Error {
     case createUserFailed(Error)
     case deleteFailed(Error)
     
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .userNotAuthenticated:
             return "User must be authenticated"

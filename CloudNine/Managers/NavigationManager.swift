@@ -7,7 +7,6 @@ class NavigationManager {
     
     func navigate(to destination: Destination) {
         path.append(destination)
-        print("navigated to \(destination)")
     }
     
     func popToRoot() {

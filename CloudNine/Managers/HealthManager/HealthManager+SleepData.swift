@@ -32,14 +32,11 @@ extension HealthManager {
             }
             
             // Fill missing days with schedule
-            print("sleepdata BEFORE filling with generated data: \(sleepData.count)")
-            
-            let userInfoPerssisted = try await UserManager().fetchUserInfo()
-            let userInfo = userInfoPerssisted
+            let userInfoPersisted = try await UserManager().fetchUserInfo()
+            let userInfo = userInfoPersisted
             if userInfo.autoGenerateSleepLogs {
                 sleepData = try fillMissingDaysWithSchedule(sleepData)
             }
-            print("sleepdata AFTER filling with generated data: \(sleepData.count)")
             
             // Apply metadata to all sleep data (both existing and new)
             applyMetadataToSleepData(metadataDict)
@@ -81,8 +78,6 @@ extension HealthManager {
     
     // MARK: - Apply metadata to sleep data
     private func applyMetadataToSleepData(_ metadataDict: [String: SleepData]) {
-        print("DEBUG: Applying metadata to \(sleepData.count) items")
-        print("DEBUG: Available metadata for \(metadataDict.count) items")
         for index in sleepData.indices {
             if let metadataItem = metadataDict[sleepData[index].id] {
                 sleepData[index].sleepQuality = metadataItem.sleepQuality
@@ -193,9 +188,6 @@ extension HealthManager {
             // Save metadata
             try await firebaseManager.saveMetadata(updatedSleepData)
             
-            let timeUpdate = (bedtime != nil || wakeTime != nil) ? " and times" : ""
-            print("Sleep metadata\(timeUpdate) updated successfully")
-            
             // Sync to backend
             Task {
                 try? await firebaseManager.syncPendingMetadata()
@@ -212,17 +204,12 @@ extension HealthManager {
         do {
             // Delete from HealthKit
             if let sampleToDelete = samplesBySessionId[sleepData.id] {
-                print("Found \(sampleToDelete.count) HealthKit samples to delete")
-                
                 // Delete from HealthKit
                 try await deleteSample(sampleToDelete)
                 samplesBySessionId.removeValue(forKey: sleepData.id)
-                print("Successfully deleted from HealthKit")
                 
                 // Reset sync timestamp to trigger refresh on next load
                 lastHealthKitSync = nil
-            } else {
-                print("No HealthKit samples found for ID: \(sleepData.id)")
             }
             
             // Delete metadata from local storage
@@ -437,8 +424,8 @@ extension HealthManager {
         
         let existingDays = Set(logs.map { calendar.startOfDay(for: $0.date) })
         
-        let userInfoPerssisted = try? userPerssistanceService.loadUserInfo()
-        let userInfo = userInfoPerssisted ?? UserInfo()
+        let userInfoPersisted = try? userPersistenceService.loadUserInfo()
+        let userInfo = userInfoPersisted ?? UserInfo()
         
         for offset in 1..<30 {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
@@ -601,27 +588,16 @@ extension HealthManager {
     /// used for debugging
     private func deleteAllSleepData() async throws {
         do {
-            print("Deleting ALL sleep data from HealthKit and local storage...")
-            
             let samples = try await fetchSleepSamples()
             
             if !samples.isEmpty {
                 try await deleteSample(samples)
-                print("Deleted \(samples.count) sleep samples from HealthKit")
-            } else {
-                print("No HealthKit sleep samples found to delete")
             }
             
             // Clear local variables
             sleepData.removeAll()
             samplesBySessionId.removeAll()
             lastHealthKitSync = nil
-            
-            //            // Clear metadata
-            //            try await firebaseManager.deleteAllMetadata()
-            //            print("Deleted all local sleep metadata")
-            
-            print("All sleep data successfully deleted")
         } catch {
             print("Failed to delete all sleep data: \(error.localizedDescription)")
             throw error

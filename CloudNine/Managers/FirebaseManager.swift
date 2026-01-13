@@ -177,7 +177,6 @@ actor FirebaseManager {
         }
         
         try await batch.commit()
-        print("Successfully batch saved \(sleepDataArray.count) sleep data records")
     }
     
     // MARK: - Query Methods

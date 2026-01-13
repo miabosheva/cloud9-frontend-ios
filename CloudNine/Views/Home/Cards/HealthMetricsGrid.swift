@@ -28,7 +28,7 @@ struct HealthMetricsGrid: View {
             LazyHStack(spacing: 16) {
                 RealTimeHeartRateCard(watchConnector: watchConnector, showingInfoAlert: $showingInfoAlert)
                 
-                if let sleepDebtResult = healthManager.sleepDeptResult {
+                if let sleepDebtResult = healthManager.sleepDebtResult {
                     SleepDebtCard(
                         sleepDebtResult: sleepDebtResult,
                         onTap: { showingSleepDebtDetails = true }

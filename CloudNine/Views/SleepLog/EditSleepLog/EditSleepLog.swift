@@ -206,7 +206,7 @@ struct EditSleepLogView: View {
     
     private func generateInsight() async {
         do {
-            let sleepLog = try await healthManager.updateSleepLog(
+            let updatedSleepLog = try await healthManager.updateSleepLog(
                 sleepDataId: logId,
                 bedtime: viewModel.combinedBedtime,
                 wakeTime: viewModel.combinedWakeTime,
@@ -214,10 +214,8 @@ struct EditSleepLogView: View {
                 description: viewModel.description,
                 tags: []
             )
-            // TODO: - Fix
-            guard var sleepLog = viewModel.sleepLog else {
-                throw HealthError.invalidSampleType
-            }
+            // Use the updated sleep log from HealthManager, converting times to local timezone
+            var sleepLog = updatedSleepLog
             sleepLog.bedtime = viewModel.combinedBedtime.toLocalTime()
             sleepLog.wakeTime = viewModel.combinedWakeTime.toLocalTime()
             insight = try await viewModel.generateInsight(sleepData: sleepLog)

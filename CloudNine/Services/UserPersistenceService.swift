@@ -1,6 +1,6 @@
 import Foundation
 
-final class UserPersistenceService: UserPerssistanceServiceProtocol {
+final class UserPersistenceService: UserPersistenceServiceProtocol {
     private let key = "user_info"
     private let defaults = UserDefaults.standard
     

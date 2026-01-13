@@ -1,5 +1,4 @@
 import Foundation
-import Foundation
 
 // TODO: - Define more sleep conditions
 enum SleepConditions: CaseIterable, Hashable, Codable {
