@@ -60,9 +60,6 @@ class GeminiService {
         let dateFormatter = DateFormatter()
         dateFormatter.timeStyle = .short
         
-        let bedtimeString = dateFormatter.string(from: userInfo.bedtime)
-        let wakeTimeString = dateFormatter.string(from: userInfo.wakeTime)
-        
         let conditionsString = userInfo.sleepConditions.isEmpty
         ? "None reported"
         : userInfo.sleepConditions.map { "\($0)" }.joined(separator: ", ")
@@ -70,7 +67,7 @@ class GeminiService {
         guard let description = sleepData.description else { throw HealthError.failedToCreateType }
         guard let sleepQuality = sleepData.sleepQuality?.numericValue else { throw HealthError.failedToCreateType }
         
-        return """
+        let prompt = """
         As a sleep analyst, provide personalized sleep insights based on the following dream and user information.
         
         **Dream Description:**
@@ -96,5 +93,7 @@ class GeminiService {
         
         Keep the insight concise (200-300 words), actionable, and empathetic.
         """
+        print(prompt)
+        return prompt
     }
 }

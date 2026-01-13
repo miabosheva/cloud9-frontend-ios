@@ -65,8 +65,7 @@ actor UserManager {
             }
             
             try await documentRef.updateData([
-                "userInfo": dictionary,
-                "lastUpdated": Timestamp(date: Date())
+                "userInfo": dictionary
             ])
             
         } catch {
@@ -90,7 +89,6 @@ actor UserManager {
             for (key, value) in updates {
                 updateData["userInfo.\(key)"] = value
             }
-            updateData["lastUpdated"] = Timestamp(date: Date())
             
             try await documentRef.updateData(updateData)
             

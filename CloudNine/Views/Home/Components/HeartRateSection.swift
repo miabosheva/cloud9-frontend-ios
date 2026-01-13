@@ -27,7 +27,7 @@ struct HeartRateSection: View {
                         do {
                             try await healthManager.loadHeartRateData(for: filter)
                         } catch {
-                            errorManager.handle(error: error)
+//                            errorManager.handle(error: error)
                         }
                     }
                 }

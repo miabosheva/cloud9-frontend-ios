@@ -117,7 +117,7 @@ extension HealthManager {
         sleepQuality: SleepQuality?,
         description: String?,
         tags: [String] = []
-    ) async throws {
+    ) async throws -> SleepData {
         do {
             // Find the sleep data
             guard let index = sleepData.firstIndex(where: { $0.id == sleepDataId }) else {
@@ -200,7 +200,7 @@ extension HealthManager {
             Task {
                 try? await firebaseManager.syncPendingMetadata()
             }
-            
+            return sleepData[index]
         } catch {
             print("Error updating sleep log: \(error.localizedDescription)")
             throw error
@@ -566,7 +566,7 @@ extension HealthManager {
         let startOfWeek: Date = {
             return calendar.date(byAdding: .day, value: -6, to: today) ?? today
         }()
-        let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today))!
+        let startOfMonth = calendar.date(byAdding: .day, value: -29, to: today)!
         
         for sample in sleepData {
             let sampleDay = calendar.startOfDay(for: sample.date)

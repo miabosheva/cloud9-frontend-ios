@@ -24,35 +24,37 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack(path: $navigationManager.path) {
-            ScrollView {
-                VStack(spacing: 24) {
-                    HeaderSection(
-                        userInfo: userInfo,
-                        onProfileTap: { navigationManager.navigate(to: .profile) }
-                    )
-                    
-                    HealthMetricsGrid(
-                        watchConnector: watchConnector,
-                        showingSleepDebtDetails: $showingSleepDebtDetails,
-                        showingInfoAlert: $showingInfoAlert
-                    )
-                    
-                    SleepInsightsSection(
-                        healthManager: healthManager,
-                        errorManager: errorManager,
-                        sleepFilter: $sleepFilter
-                    )
-                    .padding(.horizontal)
-                    
-                    HeartRateSection(
-                        healthManager: healthManager,
-                        errorManager: errorManager,
-                        watchConnector: watchConnector,
-                        heartRateFilter: $heartRateFilter
-                    )
-                    .padding(.horizontal)
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        HeaderSection(
+                            userInfo: userInfo,
+                            onProfileTap: { navigationManager.navigate(to: .profile) }
+                        )
+                        
+                        HealthMetricsGrid(
+                            watchConnector: watchConnector,
+                            showingSleepDebtDetails: $showingSleepDebtDetails,
+                            showingInfoAlert: $showingInfoAlert
+                        )
+                        
+                        SleepInsightsSection(
+                            healthManager: healthManager,
+                            errorManager: errorManager,
+                            sleepFilter: $sleepFilter
+                        )
+                        .padding(.horizontal)
+                        
+                        HeartRateSection(
+                            healthManager: healthManager,
+                            errorManager: errorManager,
+                            watchConnector: watchConnector,
+                            heartRateFilter: $heartRateFilter
+                        )
+                        .padding(.horizontal)
+                    }
+                    .padding(.bottom, 30)
                 }
-                .padding(.bottom, 30)
             }
             .refreshable {
                 Task {
@@ -75,20 +77,10 @@ struct HomeView: View {
                 SleepDebtDetailView(sleepDebtResult: healthManager.sleepDeptResult)
             }
             .task {
-                await loadData()
+                await fetchData()
             }
             .navigationBarHidden(true)
             .customNavigation()
-        }
-    }
-    
-    // MARK: - Initial Data Loading
-    private func loadData() async {
-        do {
-            await fetchData()
-            try await healthManager.requestPermissions()
-        } catch {
-            errorManager.handle(error: error)
         }
     }
     
@@ -98,7 +90,6 @@ struct HomeView: View {
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: Date.now)
             
-            // Get today's sleep (the sleep you woke up from this morning)
             let todaysSleep = healthManager.sleepData.filter { data in
                 calendar.isDate(data.date, inSameDayAs: today)
             }
@@ -115,7 +106,7 @@ struct HomeView: View {
                 )
             }
         } catch {
-            errorManager.handle(error: error)
+//            errorManager.handle(error: error)
         }
     }
 }

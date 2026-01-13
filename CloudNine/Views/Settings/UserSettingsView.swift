@@ -60,31 +60,40 @@ struct UserSettingsView: View {
             
             // Sleep Goal Section
             Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "target")
-                            .foregroundColor(.green)
-                            .frame(width: 24)
-                        Text("Tracking Goal")
-                            .font(.headline)
-                    }
-                    
-                    Picker("Tracking Goal", selection: $trackingGoal) {
-                        ForEach(TrackingGoal.allCases, id: \.self) { goal in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(goal.displayName)
-                                    .font(.body)
-                                    .fontWeight(.medium)
-                                Text(goal.description)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .tag(goal)
-                        }
-                    }
-                    .pickerStyle(.navigationLink)
-                }
+//                VStack(alignment: .leading, spacing: 12) {
+//                    HStack {
+//                        Image(systemName: "target")
+//                            .foregroundColor(.green)
+//                            .frame(width: 24)
+//                        Text("Tracking Goal")
+//                            .font(.headline)
+//                    }
+//                    
+//                    Picker("Tracking Goal", selection: $trackingGoal) {
+//                        ForEach(TrackingGoal.allCases, id: \.self) { goal in
+//                            VStack(alignment: .leading, spacing: 4) {
+//                                Text(goal.displayName)
+//                                    .font(.body)
+//                                    .fontWeight(.medium)
+//                                Text(goal.description)
+//                                    .font(.caption)
+//                                    .foregroundColor(.secondary)
+//                                    .fixedSize(horizontal: false, vertical: true)
+//                            }
+//                            .tag(goal)
+//                        }
+//                    }
+//                    .pickerStyle(.menu)
+//                    
+//                    HStack {
+//                        Spacer()
+//                        
+//                        Text(trackingGoal.description)
+//                            .font(.caption)
+//                            .foregroundColor(.secondary)
+//                            .fixedSize(horizontal: false, vertical: true)
+//                    }
+//                }
                 
                 HStack {
                     Image(systemName: "bed.double.fill")

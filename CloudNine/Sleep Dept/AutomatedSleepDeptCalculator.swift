@@ -26,7 +26,7 @@ class AutomatedSleepDebtCalculator: SleepDebtCalculator {
     func automaticCalculateDebt(sleepData: [SleepData],
                                 period: DateInterval? = nil) -> AutomatedSleepDebtResult {
         
-        let calculationPeriod = period ?? getDefaultPeriod()
+        let calculationPeriod = period ?? getDefaultPeriod(from: sleepData)
         let dataQuality = assessDataQuality(sleepData: sleepData, period: calculationPeriod)
         let strategy = selectOptimalStrategy(dataQuality: dataQuality)
         
@@ -36,36 +36,40 @@ class AutomatedSleepDebtCalculator: SleepDebtCalculator {
             endDate: calculationPeriod.end
         )
         
-        let automatedResult = AutomatedSleepDebtResult(
+        return AutomatedSleepDebtResult(
             baseResult: result,
             selectedStrategy: strategy,
             dataQuality: dataQuality,
             recommendations: generateRecommendations(result: result, dataQuality: dataQuality),
             automationSettings: settings
         )
-        
-        // Cache the data quality for future use
-        dataQualityCache[calculationPeriod] = dataQuality
-        
-        return automatedResult
     }
     
     // MARK: - Data Quality Assessment
     
     func assessDataQuality(sleepData: [SleepData], period: DateInterval) -> DataQuality {
         let calendar = Calendar.current
-        let totalDays = calendar.dateComponents([.day], from: period.start, to: period.end).day ?? 1
+        let today = calendar.startOfDay(for: Date())
+        
+        // Adjust end date to exclude today
+        let adjustedEndDate = min(period.end, today)
+        
+        // Calculate total days excluding today
+        let totalDays = max(1, calendar.dateComponents([.day], from: period.start, to: adjustedEndDate).day ?? 1)
+        
+        // Only count sleep data up to yesterday
         let availableDays = sleepData.filter { data in
-            period.contains(data.date)
+            let dataDate = calendar.startOfDay(for: data.date)
+            return dataDate >= period.start && dataDate < today
         }.count
         
         let completeness = Double(availableDays) / Double(totalDays)
         
         // Assess consistency (how regular is the data?)
-        let consistency = assessConsistency(sleepData: sleepData, period: period)
+        let consistency = assessConsistency(sleepData: sleepData, period: period, endDate: adjustedEndDate)
         
         // Assess recency (are recent days missing?)
-        let recency = assessRecency(sleepData: sleepData, period: period)
+        let recency = assessRecency(sleepData: sleepData, period: period, endDate: adjustedEndDate)
         
         // Check for weekend vs weekday patterns
         let hasWeekendPattern = assessWeekendPattern(sleepData: sleepData)
@@ -80,8 +84,15 @@ class AutomatedSleepDebtCalculator: SleepDebtCalculator {
         )
     }
     
-    private func assessConsistency(sleepData: [SleepData], period: DateInterval) -> Double {
-        let filteredData = sleepData.filter { period.contains($0.date) }
+    private func assessConsistency(sleepData: [SleepData], period: DateInterval, endDate: Date) -> Double {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        let filteredData = sleepData.filter {
+            let dataDate = calendar.startOfDay(for: $0.date)
+            return dataDate >= period.start && dataDate < today
+        }
+        
         guard filteredData.count > 1 else { return 0.0 }
         
         let durations = filteredData.map { $0.durationInHours }
@@ -93,25 +104,37 @@ class AutomatedSleepDebtCalculator: SleepDebtCalculator {
         return max(0, 1.0 - (sqrt(variance) / maxVariance))
     }
     
-    private func assessRecency(sleepData: [SleepData], period: DateInterval) -> Double {
+    private func assessRecency(sleepData: [SleepData], period: DateInterval, endDate: Date) -> Double {
         let calendar = Calendar.current
-        let last7Days = calendar.date(byAdding: .day, value: -7, to: period.end) ?? period.start
+        let today = calendar.startOfDay(for: Date())
+        let last7Days = calendar.date(byAdding: .day, value: -7, to: today) ?? period.start
         
         let recentData = sleepData.filter { data in
-            data.date >= last7Days && data.date <= period.end
+            let dataDate = calendar.startOfDay(for: data.date)
+            return dataDate >= last7Days && dataDate < today
         }
         
-        return Double(recentData.count) / 7.0
+        // Calculate how many days in the last 7 days (excluding today)
+        let daysToCheck = min(7, calendar.dateComponents([.day], from: last7Days, to: today).day ?? 7)
+        
+        return Double(recentData.count) / Double(daysToCheck)
     }
     
     private func assessWeekendPattern(sleepData: [SleepData]) -> Bool {
         let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        // Only use data from completed days
+        let completedData = sleepData.filter {
+            calendar.startOfDay(for: $0.date) < today
+        }
+        
         var weekdayTotal: Double = 0
         var weekendTotal: Double = 0
         var weekdayCount = 0
         var weekendCount = 0
         
-        for data in sleepData {
+        for data in completedData {
             let weekday = calendar.component(.weekday, from: data.date)
             if weekday == 1 || weekday == 7 { // Sunday or Saturday
                 weekendTotal += data.durationInHours
@@ -254,11 +277,19 @@ class AutomatedSleepDebtCalculator: SleepDebtCalculator {
     
     // MARK: - Helper Methods
     
-    private func getDefaultPeriod() -> DateInterval {
+    private func getDefaultPeriod(from sleepData: [SleepData]) -> DateInterval {
         let calendar = Calendar.current
-        let endDate = Date()
-        let startDate = calendar.date(byAdding: .day, value: -30, to: endDate) ?? endDate
-        return DateInterval(start: startDate, end: endDate)
+        let startOfToday = calendar.startOfDay(for: Date())
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: startOfToday)!
+        
+        guard let firstDate = sleepData.map({ $0.date }).min() else {
+            // Default to last 30 days ending yesterday
+            let start = calendar.date(byAdding: .day, value: -30, to: yesterday) ?? yesterday
+            return DateInterval(start: start, end: yesterday)
+        }
+        
+        // Period ends yesterday, not today
+        return DateInterval(start: firstDate, end: yesterday)
     }
 }
 

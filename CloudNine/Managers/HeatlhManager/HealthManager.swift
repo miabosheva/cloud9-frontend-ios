@@ -5,6 +5,12 @@ import Foundation
 @Observable
 class HealthManager: NSObject {
     
+    enum AuthorizationStatus {
+        case unknown
+        case granted
+        case denied
+    }
+    
     @ObservationIgnored let healthStore = HKHealthStore()
     @ObservationIgnored var firebaseManager = FirebaseManager()
     
@@ -17,29 +23,42 @@ class HealthManager: NSObject {
     var samplesBySessionId: [String: [HKCategorySample]] = [:]
     var userPerssistanceService: UserPerssistanceServiceProtocol = UserPersistenceService()
     
-    func requestPermissions() async throws {
+    var authorizationStatus: AuthorizationStatus = .unknown
+    
+    func requestPermissions() async {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            authorizationStatus = .denied
+            return
+        }
+        
+        let typesToShare: Set<HKSampleType> = [
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+        ]
+        
+        let typesToRead: Set<HKObjectType> = [
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
+            HKObjectType.quantityType(forIdentifier: .heartRate)!,
+            HKObjectType.quantityType(forIdentifier: .bodyTemperature)!
+        ]
+        
         do {
-            guard HKHealthStore.isHealthDataAvailable() else {
-                await MainActor.run {
-                    self.error = HealthError.healthKitNotAvailable
-                }
-                return
-            }
-            
-            let typesToShare: Set<HKSampleType> = [
-                HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
-            ]
-            
-            let typesToRead: Set<HKObjectType> = [
-                HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-                HKObjectType.quantityType(forIdentifier: .heartRate)!,
-                HKObjectType.quantityType(forIdentifier: .bodyTemperature)!
-            ]
-            
             try await healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead)
-            print("Health permissions granted")
+            
+            let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+            let status = healthStore.authorizationStatus(for: sleepType)
+            
+            await MainActor.run {
+                if status == .sharingAuthorized {
+                    self.authorizationStatus = .granted
+                } else {
+                    self.authorizationStatus = .denied
+                }
+            }
         } catch {
-            throw error
+            await MainActor.run {
+                self.authorizationStatus = .denied
+                self.error = error
+            }
         }
     }
     

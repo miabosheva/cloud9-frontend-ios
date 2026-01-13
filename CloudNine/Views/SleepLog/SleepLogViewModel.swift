@@ -108,14 +108,13 @@ class SleepLogViewModel {
         return formatter.string(from: date)
     }
     
-    func generateInsight() async throws -> String {
+    func generateInsight(sleepData: SleepData) async throws -> String {
         defer { isLoading = false }
         do {
             isLoading = true
             let userInfo = try await userManager.fetchUserInfo()
-            guard let sleepLog else { throw HealthError.failedToCreateType }
             
-            let insight = try await geminiService.analyzeDream(userInfo: userInfo, sleepData: sleepLog)
+            let insight = try await geminiService.analyzeDream(userInfo: userInfo, sleepData: sleepData)
             return insight
         } catch {
             throw error

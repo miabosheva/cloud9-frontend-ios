@@ -68,8 +68,7 @@ class AuthManager: ObservableObject {
         guard let userId = currentUser?.uid else { return }
         
         try await db.collection("users").document(userId).updateData([
-            "hasCompletedOnboarding": true,
-            "onboardingCompletedAt": Timestamp(date: Date())
+            "hasCompletedOnboarding": true
         ])
         
         await MainActor.run {
