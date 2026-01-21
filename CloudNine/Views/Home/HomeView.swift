@@ -13,6 +13,7 @@ struct HomeView: View {
     @State private var showingAddSleep = false
     @State private var heartRateFilter: HeartFilter = .today
     @State private var sleepFilter: SleepFilter = .thisWeek
+    @State private var stepsFilter: StepsFilter = .today
     @State private var showingSleepDebtDetails = false
     @State private var userInfo = UserInfo()
     @State var showingInfoAlert: Bool = false
@@ -51,6 +52,13 @@ struct HomeView: View {
                             errorManager: errorManager,
                             watchConnector: watchConnector,
                             heartRateFilter: $heartRateFilter
+                        )
+                        .padding(.horizontal)
+                        
+                        StepsSection(
+                            healthManager: healthManager,
+                            errorManager: errorManager,
+                            stepsFilter: $stepsFilter
                         )
                         .padding(.horizontal)
                     }
@@ -102,6 +110,8 @@ struct HomeView: View {
             }
             
             try await healthManager.loadInitialData()
+            // Load steps data for the current filter
+            try await healthManager.loadStepsData(for: stepsFilter)
             
             // Try to fetch user info
             do {

@@ -87,6 +87,40 @@ extension HealthManager {
         return formatter.string(from: date)
     }
     
+    // MARK: - Steps Filter
+    func dateRange(for filter: StepsFilter) -> (Date, Date) {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        switch filter {
+        case .today:
+            let startOfDay = calendar.startOfDay(for: now)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            return (startOfDay, endOfDay)
+        case .thisWeek:
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+            let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek)!
+            return (startOfWeek, endOfWeek)
+        case .thisMonth:
+            let startOfMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
+            let endOfMonth = calendar.date(byAdding: .month, value: 1, to: startOfMonth)!
+            return (startOfMonth, endOfMonth)
+        }
+    }
+    
+    func formatTimestamp(_ date: Date, for filter: StepsFilter) -> String {
+        let formatter = DateFormatter()
+        switch filter {
+        case .today:
+            formatter.dateFormat = "HH:mm"
+        case .thisWeek:
+            formatter.dateFormat = "EEE"
+        case .thisMonth:
+            formatter.dateFormat = "MMM d"
+        }
+        return formatter.string(from: date)
+    }
+    
     // MARK: - Enhanced Overlap Detection
     func validateNoOverlap(bedtime: Date, wakeTime: Date) async throws {
         for existing in sleepData {

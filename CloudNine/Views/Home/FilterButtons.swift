@@ -53,3 +53,30 @@ struct SleepFilterButtonsView: View {
         }
     }
 }
+
+struct StepsFilterButtonsView: View {
+    @Binding var selectedFilter: StepsFilter
+    let onFilterChange: (StepsFilter) -> Void
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            ForEach(StepsFilter.allCases, id: \.self) { filter in
+                Button(action: {
+                    selectedFilter = filter
+                    onFilterChange(filter)
+                }) {
+                    Text(filter.rawValue)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(selectedFilter == filter ? Color.blue : Color.gray.opacity(0.2))
+                        .foregroundColor(selectedFilter == filter ? .white : .primary)
+                        .cornerRadius(8)
+                }
+            }
+            
+            Spacer()
+        }
+    }
+}

@@ -16,6 +16,7 @@ class HealthManager: NSObject {
     
     var sleepChartData: [SleepChartData] = []
     var heartRateData: [HeartRateData] = []
+    var stepsData: [StepsData] = []
     var sleepData: [SleepData] = []
     var sleepDebtResult: AutomatedSleepDebtResult?
     var error: Error?
@@ -79,6 +80,7 @@ class HealthManager: NSObject {
     func loadInitialData() async throws {
         try await loadHeartRateData(for: .thisMonth)
         try await loadSleepData()
+        try await loadStepsData(for: .thisWeek)
         loadSleepSamplesForChart(filter: .thisWeek)
     }
     
