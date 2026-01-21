@@ -12,7 +12,7 @@ struct UserInfo: Codable {
     var trackingGoal: TrackingGoal = .balanced
     var sleepDuration: Double = 8.0
     var baselineTrainingStartDate: Date? // When baseline training period started
-    var baselineTrainingCompleted: Bool = false // Whether 7-day baseline is complete
+    var baselineTrainingCompleted: Bool? = false // Whether 7-day baseline is complete
     
     init(
         firstName: String = "",
@@ -26,7 +26,7 @@ struct UserInfo: Codable {
         trackingGoal: TrackingGoal = .balanced,
         sleepDuration: Double = 8.0,
         baselineTrainingStartDate: Date? = nil,
-        baselineTrainingCompleted: Bool = false
+        baselineTrainingCompleted: Bool? = false
     ) {
         self.firstName = firstName
         self.lastName = lastName

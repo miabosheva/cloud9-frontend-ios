@@ -5,6 +5,7 @@ import Charts
 struct HomeView: View {
     @Environment(HealthManager.self) var healthManager
     @Environment(ErrorManager.self) var errorManager
+    @EnvironmentObject var authManager: AuthManager
     @State var navigationManager = NavigationManager()
     @State var viewModel = HomeViewModel()
     @Bindable var watchConnector: WatchConnectivityManager
@@ -87,6 +88,12 @@ struct HomeView: View {
     // MARK: - Data Loading
     private func fetchData() async {
         do {
+            // Ensure user is authenticated
+            guard authManager.isAuthenticated, authManager.currentUser != nil else {
+                // User not authenticated, AuthManager will handle redirect
+                return
+            }
+            
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: Date.now)
             
@@ -95,18 +102,55 @@ struct HomeView: View {
             }
             
             try await healthManager.loadInitialData()
-            userInfo = try await userManager.fetchUserInfo()
-            healthManager.calculateSleepDebt(user: userInfo)
             
-            if let sleepDebtResult = healthManager.sleepDebtResult {
-                watchConnector.sendAllSleepData(
-                    sleepDebtResult,
-                    duration: todaysSleep.totalFormattedDuration,
-                    quality: todaysSleep.first?.sleepQuality?.rawValue
-                )
+            // Try to fetch user info
+            do {
+                userInfo = try await userManager.fetchUserInfo()
+                healthManager.calculateSleepDebt(user: userInfo)
+                
+                if let sleepDebtResult = healthManager.sleepDebtResult {
+                    watchConnector.sendAllSleepData(
+                        sleepDebtResult,
+                        duration: todaysSleep.totalFormattedDuration,
+                        quality: todaysSleep.first?.sleepQuality?.rawValue
+                    )
+                }
+            } catch let error as UserManagerError {
+                // If user info is not found or invalid, redirect to onboarding (no error shown)
+                switch error {
+                case .userInfoNotFound, .invalidUserInfoData:
+                    // User info not found or invalid - redirect to onboarding silently
+                    authManager.resetOnboardingStatus()
+                    return
+                case .userNotAuthenticated:
+                    // User not authenticated, AuthManager will handle redirect
+                    return
+                case .fetchFailed(let underlyingError):
+                    // Check if it's a decoding error (corrupted userInfo) - redirect to onboarding
+                    if underlyingError is DecodingError {
+                        authManager.resetOnboardingStatus()
+                        return
+                    }
+                    // Other fetch errors, show error
+                    await MainActor.run {
+                        errorManager.handle(error: error)
+                    }
+                default:
+                    // Other errors, show error but don't redirect
+                    await MainActor.run {
+                        errorManager.handle(error: error)
+                    }
+                }
+            } catch {
+                // For any other error, show error
+                await MainActor.run {
+                    errorManager.handle(error: error)
+                }
             }
         } catch {
-//            errorManager.handle(error: error)
+            await MainActor.run {
+                errorManager.handle(error: error)
+            }
         }
     }
 }

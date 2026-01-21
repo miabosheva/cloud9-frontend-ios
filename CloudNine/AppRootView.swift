@@ -12,8 +12,13 @@ struct AppRootView: View {
                 AuthenticationView()
             } else if !authManager.hasCompletedOnboarding {
                 OnboardingView()
-            } else {
+            } else if authManager.isAuthenticated && authManager.hasCompletedOnboarding {
+                // Only show main app if user is authenticated AND has completed onboarding
                 MainTabView()
+                    .environmentObject(authManager)
+            } else {
+                // Fallback: if somehow we're in an invalid state, show authentication
+                AuthenticationView()
             }
         }
         .environmentObject(authManager)

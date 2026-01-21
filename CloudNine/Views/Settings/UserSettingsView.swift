@@ -4,8 +4,8 @@ struct UserSettingsView: View {
     
     @Environment(HealthManager.self) var healthManager
     @Environment(ErrorManager.self) var errorManager
+    @EnvironmentObject var authManager: AuthManager
     
-    private var authManager = AuthManager()
     private var userManager = UserManager()
     
     @State private var bedtime = Date()
@@ -20,6 +20,7 @@ struct UserSettingsView: View {
     @State private var sleepDuration: Double = 8.0
     @State private var isLoading = false
     @State private var showLogoutAlert = false
+    @State private var hasUserInfo = false
     
     var body: some View {
         Form {
@@ -274,6 +275,15 @@ struct UserSettingsView: View {
             Text("Are you sure you want to sign out?")
         }
         .task {
+            // Ensure user is authenticated before loading
+            guard authManager.isAuthenticated, authManager.currentUser != nil else {
+                errorManager.handle(
+                    error: NSError(domain: "UserSettingsView", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]),
+                    errorTitle: "Authentication Required",
+                    alertType: .alert
+                )
+                return
+            }
             await loadUserInfo()
         }
     }
@@ -281,11 +291,24 @@ struct UserSettingsView: View {
     // MARK: - Helper Methods
     
     private func loadUserInfo() async {
+        // Double-check authentication
+        guard authManager.isAuthenticated, authManager.currentUser != nil else {
+            await MainActor.run {
+                errorManager.handle(
+                    error: NSError(domain: "UserSettingsView", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]),
+                    errorTitle: "Authentication Required",
+                    alertType: .alert
+                )
+            }
+            return
+        }
+        
         do {
             let userInfo = try await userManager.fetchUserInfo()
             
             await MainActor.run {
                 self.userInfo = userInfo
+                self.hasUserInfo = true
                 bedtime = userInfo.bedtime
                 wakeTime = userInfo.wakeTime
                 selectedConditions = Set(userInfo.sleepConditions)
@@ -296,22 +319,41 @@ struct UserSettingsView: View {
                 sleepDuration = userInfo.sleepDuration
             }
         } catch {
-            errorManager.handle(error: error)
+            await MainActor.run {
+                // If user info doesn't exist, create a default one
+                if let userManagerError = error as? UserManagerError,
+                   case .userInfoNotFound = userManagerError {
+                    // Create default user info
+                    self.userInfo = UserInfo()
+                    self.hasUserInfo = false
+                } else {
+                    errorManager.handle(error: error)
+                }
+            }
         }
     }
     
     private func saveUserInfo() {
+        // Ensure user is authenticated
+        guard authManager.isAuthenticated, authManager.currentUser != nil else {
+            errorManager.handle(
+                error: NSError(domain: "UserSettingsView", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]),
+                errorTitle: "Authentication Required",
+                alertType: .alert
+            )
+            return
+        }
+        
         Task {
             isLoading = true
             
             do {
-                guard let userInfo else {
-                    throw HealthError.userInfoNotFound
-                }
+                // Use existing userInfo or create new one
+                let existingInfo = userInfo ?? UserInfo()
                 
                 let info = UserInfo(
-                    firstName: userInfo.firstName,
-                    lastName: userInfo.lastName,
+                    firstName: existingInfo.firstName,
+                    lastName: existingInfo.lastName,
                     bedtime: bedtime,
                     wakeTime: wakeTime,
                     sleepConditions: Array(selectedConditions),
@@ -319,11 +361,15 @@ struct UserSettingsView: View {
                     weight: Int(weight) ?? 0,
                     autoGenerateSleepLogs: autoGenerateLogs,
                     trackingGoal: trackingGoal,
-                    sleepDuration: sleepDuration
+                    sleepDuration: sleepDuration,
+                    baselineTrainingStartDate: existingInfo.baselineTrainingStartDate,
+                    baselineTrainingCompleted: existingInfo.baselineTrainingCompleted
                 )
                 
                 try await userManager.saveUserInfo(info)
                 await MainActor.run {
+                    self.userInfo = info
+                    self.hasUserInfo = true
                     isLoading = false
                     errorManager.handle(
                         error: nil,
@@ -343,6 +389,7 @@ struct UserSettingsView: View {
     private func signOut() {
         do {
             try authManager.signOut()
+            // AuthManager will handle clearing the state and UserDefaults
         } catch {
             errorManager.handle(error: error)
         }
