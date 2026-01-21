@@ -11,6 +11,8 @@ struct UserInfo: Codable {
     var autoGenerateSleepLogs: Bool = false
     var trackingGoal: TrackingGoal = .balanced
     var sleepDuration: Double = 8.0
+    var baselineTrainingStartDate: Date? // When baseline training period started
+    var baselineTrainingCompleted: Bool = false // Whether 7-day baseline is complete
     
     init(
         firstName: String = "",
@@ -22,7 +24,9 @@ struct UserInfo: Codable {
         weight: Int = 0,
         autoGenerateSleepLogs: Bool = false,
         trackingGoal: TrackingGoal = .balanced,
-        sleepDuration: Double = 8.0
+        sleepDuration: Double = 8.0,
+        baselineTrainingStartDate: Date? = nil,
+        baselineTrainingCompleted: Bool = false
     ) {
         self.firstName = firstName
         self.lastName = lastName
@@ -34,6 +38,8 @@ struct UserInfo: Codable {
         self.autoGenerateSleepLogs = autoGenerateSleepLogs
         self.trackingGoal = trackingGoal
         self.sleepDuration = sleepDuration
+        self.baselineTrainingStartDate = baselineTrainingStartDate
+        self.baselineTrainingCompleted = baselineTrainingCompleted
     }
     
     static func defaultBedtime() -> Date {

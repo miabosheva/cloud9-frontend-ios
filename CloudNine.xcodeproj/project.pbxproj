@@ -53,9 +53,8 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Models/HeartRateData.swift,
-				Models/SleepChartData.swift,
-				Models/SleepCondition.swift,
-				Models/SleepData.swift,
+				Models/Sleep/SleepCondition.swift,
+				Models/Sleep/SleepData.swift,
 				Models/TrackingGoal.swift,
 				Models/UserInfo.swift,
 				Utilities/SleepDurationHelper.swift,

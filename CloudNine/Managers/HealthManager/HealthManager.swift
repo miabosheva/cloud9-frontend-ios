@@ -33,7 +33,11 @@ class HealthManager: NSObject {
         
         guard let sleepAnalysisType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
               let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate),
-              let bodyTemperatureType = HKObjectType.quantityType(forIdentifier: .bodyTemperature) else {
+              let bodyTemperatureType = HKObjectType.quantityType(forIdentifier: .bodyTemperature),
+              let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
+              let restingHRType = HKObjectType.quantityType(forIdentifier: .restingHeartRate),
+              let stepsType = HKObjectType.quantityType(forIdentifier: .stepCount),
+              let activeEnergyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) else {
             await MainActor.run {
                 self.authorizationStatus = .denied
                 self.error = HealthError.failedToCreateType
@@ -42,7 +46,15 @@ class HealthManager: NSObject {
         }
         
         let typesToShare: Set<HKSampleType> = [sleepAnalysisType]
-        let typesToRead: Set<HKObjectType> = [sleepAnalysisType, heartRateType, bodyTemperatureType]
+        let typesToRead: Set<HKObjectType> = [
+            sleepAnalysisType,
+            heartRateType,
+            bodyTemperatureType,
+            hrvType,
+            restingHRType,
+            stepsType,
+            activeEnergyType
+        ]
         
         do {
             try await healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead)
