@@ -11,7 +11,10 @@ class StressDataCollector: ObservableObject {
     private var heartRateBuffer: [(value: Double, timestamp: Date)] = []
     private let windowDuration: TimeInterval = 25.0 // seconds
     private var predictionTimer: Timer?
+    private var heartRateSamplingTimer: Timer?
     private var heartRateObserver: NSObjectProtocol?
+    private var lastKnownHeartRate: Double = 0.0
+    private var collectionStartTime: Date?
     
     @Published var isCollecting = false
     @Published var currentPrediction: StressPrediction?
@@ -40,7 +43,7 @@ class StressDataCollector: ObservableObject {
     // MARK: - Heart Rate Observer
     
     private func setupHeartRateObserver() {
-        // Observe heart rate updates from watch
+        // Observe heart rate updates from watch (used to update lastKnownHeartRate)
         heartRateObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("HeartRateUpdated"),
             object: nil,
@@ -51,11 +54,9 @@ class StressDataCollector: ObservableObject {
                 return
             }
             
-            if self.isCollecting {
-                self.heartRateBuffer.append((value: heartRate, timestamp: Date()))
-                // Keep only last 30 seconds of data
-                let cutoffTime = Date().addingTimeInterval(-30)
-                self.heartRateBuffer = self.heartRateBuffer.filter { $0.timestamp >= cutoffTime }
+            // Update last known heart rate for use in sampling
+            if self.isCollecting && heartRate > 0 {
+                self.lastKnownHeartRate = heartRate
             }
         }
     }
@@ -85,14 +86,94 @@ class StressDataCollector: ObservableObject {
         heartRateBuffer.removeAll()
         errorMessage = nil
         currentPrediction = nil
+        lastKnownHeartRate = 0.0
+        collectionStartTime = Date()
         
         // Start workout session on watch
         watchConnector.startWorkout()
         
-        // Wait a moment for workout to start, then begin countdown
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        // Wait a moment for workout to start, then begin sampling and countdown
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self = self else { return }
+            self.startHeartRateSampling()
             self.startCountdown()
+        }
+    }
+    
+    // MARK: - Heart Rate Sampling
+    
+    private func startHeartRateSampling() {
+        // Sample heart rate every second
+        heartRateSamplingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            Task { @MainActor in
+                guard let self = self, self.isCollecting else {
+                    timer.invalidate()
+                    return
+                }
+                
+                await self.sampleHeartRate()
+            }
+        }
+    }
+    
+    private func sampleHeartRate() async {
+        guard let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
+            return
+        }
+        
+        // Get the most recent heart rate sample
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let endDate = Date()
+        let startDate = endDate.addingTimeInterval(-5) // Look back 5 seconds
+        
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictEndDate)
+        
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: heartRateType,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: [sortDescriptor]
+            ) { [weak self] query, samples, error in
+                guard let self = self else {
+                    continuation.resume()
+                    return
+                }
+                
+                Task { @MainActor in
+                    let currentTime = Date()
+                    var heartRate: Double = self.lastKnownHeartRate
+                    
+                    if let sample = samples?.first as? HKQuantitySample {
+                        let hrUnit = HKUnit.count().unitDivided(by: .minute())
+                        heartRate = sample.quantity.doubleValue(for: hrUnit)
+                        self.lastKnownHeartRate = heartRate
+                    } else if self.lastKnownHeartRate > 0 {
+                        // Use last known value if no new sample
+                        heartRate = self.lastKnownHeartRate
+                    } else {
+                        // Try to get from watch connector as fallback
+                        heartRate = self.watchConnector.currentHeartRate
+                        if heartRate > 0 {
+                            self.lastKnownHeartRate = heartRate
+                        }
+                    }
+                    
+                    // Store the value for this second
+                    if heartRate > 0 {
+                        self.heartRateBuffer.append((value: heartRate, timestamp: currentTime))
+                        print("📊 Sampled heart rate: \(heartRate) BPM at \(currentTime), Total samples: \(self.heartRateBuffer.count)")
+                        
+                        // Keep only last 30 seconds of data
+                        let cutoffTime = currentTime.addingTimeInterval(-30)
+                        self.heartRateBuffer = self.heartRateBuffer.filter { $0.timestamp >= cutoffTime }
+                    }
+                    
+                    continuation.resume()
+                }
+            }
+            
+            self.healthStore.execute(query)
         }
     }
     
@@ -119,9 +200,13 @@ class StressDataCollector: ObservableObject {
         isCollecting = false
         predictionTimer?.invalidate()
         predictionTimer = nil
+        heartRateSamplingTimer?.invalidate()
+        heartRateSamplingTimer = nil
         watchConnector.stopWorkout()
         heartRateBuffer.removeAll()
         countdown = 25
+        lastKnownHeartRate = 0.0
+        collectionStartTime = nil
     }
     
     // MARK: - Feature Extraction
