@@ -192,6 +192,13 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             if let heartRate = message["heartRate"] as? Double {
                 self.currentHeartRate = heartRate
                 self.measurementTimestamp = Date.now
+                
+                // Post notification for stress collector
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("HeartRateUpdated"),
+                    object: nil,
+                    userInfo: ["heartRate": heartRate]
+                )
             }
             
             if let workoutActive = message["workoutActive"] as? Bool {
