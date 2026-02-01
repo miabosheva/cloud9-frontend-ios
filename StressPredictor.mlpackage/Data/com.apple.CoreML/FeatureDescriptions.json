@@ -1,0 +1,30 @@
+{
+  "Inputs" : {
+    "hr_mean" : {
+      "MLFeatureShortDescription" : "--"
+    },
+    "hr_std" : {
+      "MLFeatureShortDescription" : "--"
+    },
+    "lf_hf_ratio" : {
+      "MLFeatureShortDescription" : "--"
+    },
+    "hrv_sdnn" : {
+      "MLFeatureShortDescription" : "--"
+    }
+  },
+  "Outputs" : {
+    "stress_label" : {
+      "MLFeatureShortDescription" : "--"
+    },
+    "classProbability" : {
+      "MLFeatureShortDescription" : "--"
+    }
+  },
+  "TrainingInputs" : {
+
+  },
+  "States" : {
+
+  }
+}

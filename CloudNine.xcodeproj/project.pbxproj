@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0D7BD96D2F2F7206001E4C0D /* StressPredictor.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 0D7BD96C2F2F7206001E4C0D /* StressPredictor.mlpackage */; };
+		0D7BD96E2F2F7206001E4C0D /* StressPredictor.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 0D7BD96C2F2F7206001E4C0D /* StressPredictor.mlpackage */; };
 		0DBEF8172E081CC6009A33F8 /* CloudNineWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BD25D55F2E8B185500DE7968 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */; };
 		BD5A7D942E8DB66700CBE395 /* GoogleGenerativeAI in Frameworks */ = {isa = PBXBuildFile; productRef = BD5A7D932E8DB66700CBE395 /* GoogleGenerativeAI */; };
@@ -42,6 +44,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0D7BD96C2F2F7206001E4C0D /* StressPredictor.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = StressPredictor.mlpackage; sourceTree = "<group>"; };
 		0DB92F712E4BB1F9008481F2 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
 		0DBEF7C12E06CF6C009A33F8 /* CloudNine.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudNine.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0DBEF80D2E081CC3009A33F8 /* CloudNineWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CloudNineWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -128,6 +131,7 @@
 				0DBEF80E2E081CC3009A33F8 /* CloudNineWatch Watch App */,
 				0DB92F702E4BB1F9008481F2 /* Frameworks */,
 				0DBEF7C22E06CF6C009A33F8 /* Products */,
+				0D7BD96C2F2F7206001E4C0D /* StressPredictor.mlpackage */,
 			);
 			sourceTree = "<group>";
 		};
@@ -258,6 +262,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0D7BD96E2F2F7206001E4C0D /* StressPredictor.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,6 +270,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0D7BD96D2F2F7206001E4C0D /* StressPredictor.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
