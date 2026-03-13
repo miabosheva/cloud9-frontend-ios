@@ -354,7 +354,8 @@ class StressDataCollector: ObservableObject {
 
 // MARK: - Data Models
 
-struct StressPrediction {
+struct StressPrediction: Equatable {
+    let id: UUID = UUID()
     let stressLevel: Int // 0-10
     let probability: [Int64: Double] // Class probabilities
     let timestamp: Date
@@ -376,5 +377,9 @@ struct StressPrediction {
         case 7...10: return .red
         default: return .gray
         }
+    }
+    
+    static func == (lhs: StressPrediction, rhs: StressPrediction) -> Bool {
+        return lhs.id == rhs.id
     }
 }

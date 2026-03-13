@@ -40,16 +40,33 @@ struct MainTabView: View {
                 .padding()
                 
             case .granted:
-                TabView {
-                    HomeView(watchConnector: watchConnector)
-                        .tabItem {
-                            Label("Home", systemImage: "house.fill")
+                Group {
+                    if #available(iOS 26, *) {
+                        TabView {
+                            HomeView(watchConnector: watchConnector)
+                                .tabItem {
+                                    Label("Home", systemImage: "house.fill")
+                                }
+                            
+                            SleepSummaryTabs()
+                                .tabItem {
+                                    Label("Sleep Log", systemImage: "moon.stars.fill")
+                                }
                         }
-                    
-                    SleepSummaryTabs()
-                        .tabItem {
-                            Label("Sleep Log", systemImage: "moon.stars.fill")
+                        .tint(.accentColor)
+                    } else {
+                        TabView {
+                            HomeView(watchConnector: watchConnector)
+                                .tabItem {
+                                    Label("Home", systemImage: "house.fill")
+                                }
+                            
+                            SleepSummaryTabs()
+                                .tabItem {
+                                    Label("Sleep Log", systemImage: "moon.stars.fill")
+                                }
                         }
+                    }
                 }
                 .handleGlobalErrors()
                 .environment(healthManager)

@@ -91,13 +91,8 @@ struct StressPredictionCard: View {
                 }
             }) {
                 Text(collector.isCollecting ? "Cancel" : "Start")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(collector.isCollecting ? Color.red : Color.blue)
-                    .cornerRadius(10)
             }
+            .buttonStyle(PrimaryButtonStyle26Adaptive())
             .disabled(collector.isCollecting && collector.countdown == 0)
         }
         .padding(16)

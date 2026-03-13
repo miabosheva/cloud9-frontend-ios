@@ -45,13 +45,8 @@ struct StressPromptView: View {
                     dismiss()
                 } label: {
                     Text("Submit")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
                 }
+                .buttonStyle(PrimaryButtonStyle26Adaptive())
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             }

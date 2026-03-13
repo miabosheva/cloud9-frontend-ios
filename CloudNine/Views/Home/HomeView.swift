@@ -18,6 +18,9 @@ struct HomeView: View {
     @State private var showingSleepDebtDetails = false
     @State private var userInfo = UserInfo()
     @State var showingInfoAlert: Bool = false
+    @State private var isShowingSaveResultAlert: Bool = false
+    @State private var saveResultTitle: String = ""
+    @State private var saveResultMessage: String = ""
     
     private var userManager = UserManager()
     
@@ -68,13 +71,8 @@ struct HomeView: View {
                             stressPromptManager.beginMeasurement(isTest: true)
                         } label: {
                             Text("Trigger Stress Prompt (Test)")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundColor(.white)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 12)
-                                .background(Color.purple)
-                                .cornerRadius(12)
                         }
+                        .buttonStyle(SecondaryButtonStyle26Adaptive())
                         .padding(.horizontal)
                     }
                     .padding(.bottom, 30)
@@ -97,6 +95,11 @@ struct HomeView: View {
             } message: {
                 Text("To begin a measurement, please open the app on your Apple Watch.")
             }
+            .alert(saveResultTitle, isPresented: $isShowingSaveResultAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(saveResultMessage)
+            }
             .sheet(isPresented: $showingSleepDebtDetails) {
                 SleepDebtDetailView(sleepDebtResult: healthManager.sleepDebtResult)
             }
@@ -108,12 +111,26 @@ struct HomeView: View {
                 ) { prediction in
                     stressPromptManager.handleDataCollectionCompleted(prediction: prediction)
                 }
+                .applyDataCollectionSheetStyle()
             }
             // User 1–10 prompt sheet
             .sheet(isPresented: $stressPromptManager.isShowingPrompt) {
                 StressPromptView { value in
                     stressPromptManager.handleUserResponse(value)
                 }
+                .applyPromptSheetStyle()
+            }
+            .onChange(of: stressPromptManager.lastSaveSucceeded) { _, newValue in
+                guard newValue else { return }
+                saveResultTitle = "Saved"
+                saveResultMessage = "Thank you! Your stress rating was saved successfully."
+                isShowingSaveResultAlert = true
+            }
+            .onChange(of: stressPromptManager.lastSaveError) { _, errorText in
+                guard let errorText, !errorText.isEmpty else { return }
+                saveResultTitle = "Save Failed"
+                saveResultMessage = "Your stress rating could not be saved.\n\n\(errorText)"
+                isShowingSaveResultAlert = true
             }
             .task {
                 await fetchData()

@@ -7,6 +7,8 @@ class StressPromptManager: ObservableObject {
     @Published var isShowingPrompt = false
     @Published var currentPrediction: StressPrediction?
     @Published var isTestFlow = false
+    @Published var lastSaveError: String?
+    @Published var lastSaveSucceeded: Bool = false
 
     private let watchConnector: WatchConnectivityManager
     private let repository = StressMeasurementRepository()
@@ -68,7 +70,12 @@ class StressPromptManager: ObservableObject {
         Task {
             do {
                 try await repository.save(sample)
+                lastSaveSucceeded = true
+                lastSaveError = nil
+                print("✅ Successfully saved stress measurement sample with rating \(value)")
             } catch {
+                lastSaveSucceeded = false
+                lastSaveError = error.localizedDescription
                 print("❌ Failed to save stress measurement sample: \(error)")
             }
         }

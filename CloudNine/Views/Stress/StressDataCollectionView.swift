@@ -16,6 +16,12 @@ struct StressDataCollectionView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 32)
 
+            Text("Please open the CloudNine Apple Watch companion app to start measuring.")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.red)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
             Text("Keep your watch on and stay still if possible. This usually takes around 25 seconds.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
@@ -39,9 +45,8 @@ struct StressDataCollectionView: View {
                 dismiss()
             } label: {
                 Text("Cancel")
-                    .font(.headline)
-                    .foregroundColor(.red)
             }
+            .buttonStyle(SecondaryButtonStyle26Adaptive())
             .padding(.bottom, 24)
         }
         .onAppear {
