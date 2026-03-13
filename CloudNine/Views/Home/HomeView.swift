@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(HealthManager.self) var healthManager
     @Environment(ErrorManager.self) var errorManager
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var stressPromptManager: StressPromptManager
     @State var navigationManager = NavigationManager()
     @State var viewModel = HomeViewModel()
     @Bindable var watchConnector: WatchConnectivityManager
@@ -61,6 +62,20 @@ struct HomeView: View {
                             stepsFilter: $stepsFilter
                         )
                         .padding(.horizontal)
+
+                        // Developer / testing button to trigger stress prompt manually
+                        Button {
+                            stressPromptManager.beginMeasurement(isTest: true)
+                        } label: {
+                            Text("Trigger Stress Prompt (Test)")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundColor(.white)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(Color.purple)
+                                .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
                     }
                     .padding(.bottom, 30)
                 }
@@ -84,6 +99,21 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showingSleepDebtDetails) {
                 SleepDebtDetailView(sleepDebtResult: healthManager.sleepDebtResult)
+            }
+            // Data collection sheet
+            .sheet(isPresented: $stressPromptManager.isShowingDataCollection) {
+                StressDataCollectionView(
+                    collector: stressPromptManager.makeCollector(),
+                    isTest: stressPromptManager.isTestFlow
+                ) { prediction in
+                    stressPromptManager.handleDataCollectionCompleted(prediction: prediction)
+                }
+            }
+            // User 1–10 prompt sheet
+            .sheet(isPresented: $stressPromptManager.isShowingPrompt) {
+                StressPromptView { value in
+                    stressPromptManager.handleUserResponse(value)
+                }
             }
             .task {
                 await fetchData()

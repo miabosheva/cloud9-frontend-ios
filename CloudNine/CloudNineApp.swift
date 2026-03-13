@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseCore
+import UserNotifications
 
 @main
 struct CloudNineApp: App {
@@ -12,6 +13,11 @@ struct CloudNineApp: App {
         }
         
         FirebaseApp.configure(options: options)
+
+        // Request notification permissions for stress prompts.
+        StressNotificationScheduler.shared.requestAuthorization()
+        // Schedule today's random prompts.
+        StressNotificationScheduler.shared.scheduleDailyPrompts()
     }
     
     var body: some Scene {

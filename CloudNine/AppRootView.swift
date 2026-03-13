@@ -3,6 +3,7 @@ import SwiftUI
 struct AppRootView: View {
     @StateObject private var authManager = AuthManager()
     @State private var errorManager = ErrorManager()
+    @StateObject private var notificationHandler = NotificationHandler.shared
     
     var body: some View {
         Group {
@@ -23,6 +24,13 @@ struct AppRootView: View {
         }
         .environmentObject(authManager)
         .environment(errorManager)
+        .onChange(of: notificationHandler.didTapStressPrompt) { _, newValue in
+            // When a stress notification is tapped, MainTabView / HomeView
+            // will read this via environment and start the measurement flow.
+            if newValue {
+                // Reset is handled in HomeView once the prompt starts.
+            }
+        }
     }
 }
 

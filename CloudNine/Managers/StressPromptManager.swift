@@ -1,0 +1,88 @@
+import Foundation
+import SwiftUI
+
+@MainActor
+class StressPromptManager: ObservableObject {
+    @Published var isShowingDataCollection = false
+    @Published var isShowingPrompt = false
+    @Published var currentPrediction: StressPrediction?
+    @Published var isTestFlow = false
+
+    private let watchConnector: WatchConnectivityManager
+    private let repository = StressMeasurementRepository()
+    private var collector: StressDataCollector?
+
+    private var promptShownAt: Date?
+
+    init(watchConnector: WatchConnectivityManager) {
+        self.watchConnector = watchConnector
+    }
+
+    func beginMeasurement(isTest: Bool) {
+        isTestFlow = isTest
+        currentPrediction = nil
+
+        if collector == nil {
+            collector = StressDataCollector(watchConnector: watchConnector)
+        }
+
+        isShowingDataCollection = true
+    }
+
+    func handleDataCollectionCompleted(prediction: StressPrediction) {
+        currentPrediction = prediction
+        isShowingDataCollection = false
+
+        // After data collection, show user prompt (model result is not shown).
+        promptShownAt = Date()
+        isShowingPrompt = true
+    }
+
+    func handleUserResponse(_ value: Int) {
+        guard let prediction = currentPrediction,
+              let promptShownAt = promptShownAt else {
+            isShowingPrompt = false
+            return
+        }
+
+        let responseAt = Date()
+        let latency = Int(responseAt.timeIntervalSince(promptShownAt))
+
+        let confidence = prediction.probability[prediction.probability.keys.max() ?? 0] ?? 0.0
+        let features = prediction.features
+
+        let sample = StressMeasurementSample(
+            hrMean: features.hrMean,
+            hrStd: features.hrStd,
+            hrvSDNN: features.hrvSDNN,
+            lfHfRatio: features.lfHfRatio,
+            modelPrediction: prediction.stressLevel,
+            confidenceScore: confidence,
+            userPrediction: value,
+            phase: StressPhaseConfig.currentPhase,
+            responseLatencySeconds: latency,
+            activityType: "unknown",
+            isTest: isTestFlow
+        )
+
+        Task {
+            do {
+                try await repository.save(sample)
+            } catch {
+                print("❌ Failed to save stress measurement sample: \(error)")
+            }
+        }
+
+        isShowingPrompt = false
+    }
+
+    func makeCollector() -> StressDataCollector {
+        if let collector {
+            return collector
+        }
+        let newCollector = StressDataCollector(watchConnector: watchConnector)
+        collector = newCollector
+        return newCollector
+    }
+}
+

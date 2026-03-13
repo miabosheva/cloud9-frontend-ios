@@ -2,9 +2,15 @@ import SwiftUI
 import HealthKit
 
 struct MainTabView: View {
-    
     @State private var healthManager = HealthManager()
     @State private var watchConnector = WatchConnectivityManager()
+    @StateObject private var stressPromptManager: StressPromptManager
+    @EnvironmentObject private var authManager: AuthManager
+    @StateObject private var notificationHandler = NotificationHandler.shared
+    
+    init() {
+        _stressPromptManager = StateObject(wrappedValue: StressPromptManager(watchConnector: WatchConnectivityManager()))
+    }
     
     var body: some View {
         Group {
@@ -47,6 +53,13 @@ struct MainTabView: View {
                 }
                 .handleGlobalErrors()
                 .environment(healthManager)
+                .environmentObject(stressPromptManager)
+                .onChange(of: notificationHandler.didTapStressPrompt) { _, newValue in
+                    if newValue {
+                        stressPromptManager.beginMeasurement(isTest: false)
+                        notificationHandler.didTapStressPrompt = false
+                    }
+                }
             }
         }
     }
