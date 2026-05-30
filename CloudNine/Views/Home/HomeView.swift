@@ -37,6 +37,9 @@ struct HomeView: View {
                             userInfo: userInfo,
                             onProfileTap: { navigationManager.navigate(to: .profile) }
                         )
+
+                        StressPredictionCard()
+                            .padding(.horizontal)
                         
                         HealthMetricsGrid(
                             watchConnector: watchConnector,
@@ -103,21 +106,25 @@ struct HomeView: View {
             .sheet(isPresented: $showingSleepDebtDetails) {
                 SleepDebtDetailView(sleepDebtResult: healthManager.sleepDebtResult)
             }
-            // Data collection sheet
-            .sheet(isPresented: $stressPromptManager.isShowingDataCollection) {
+            // Full-screen stress measurement flow
+            .fullScreenCover(isPresented: $stressPromptManager.isShowingDataCollection) {
                 StressDataCollectionView(
                     collector: stressPromptManager.makeCollector(),
                     isTest: stressPromptManager.isTestFlow
                 ) { prediction in
                     stressPromptManager.handleDataCollectionCompleted(prediction: prediction)
                 }
-                .applyDataCollectionSheetStyle()
             }
             // User 1–10 prompt sheet
             .sheet(isPresented: $stressPromptManager.isShowingPrompt) {
-                StressPromptView { value in
-                    stressPromptManager.handleUserResponse(value)
-                }
+                StressPromptView(
+                    onSubmit: { value in
+                        stressPromptManager.handleUserResponse(value)
+                    },
+                    onSkip: {
+                        stressPromptManager.handleUserSkippedRating()
+                    }
+                )
                 .applyPromptSheetStyle()
             }
             .onChange(of: stressPromptManager.lastSaveSucceeded) { _, newValue in
@@ -216,4 +223,5 @@ struct HomeView: View {
     HomeView(watchConnector: WatchConnectivityManager())
         .environment(HealthManager())
         .environment(ErrorManager())
+        .environmentObject(StressPromptManager(watchConnector: WatchConnectivityManager()))
 }

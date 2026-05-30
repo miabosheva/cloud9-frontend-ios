@@ -5,15 +5,7 @@ import SwiftUI
 
 class WorkoutManager: NSObject, ObservableObject {
     var selectedWorkout: HKWorkoutActivityType = .other
-    
-    @Published var showingSummaryView: Bool = false {
-        didSet {
-            if showingSummaryView == false {
-                resetWorkout()
-            }
-        }
-    }
-    
+
     let healthStore = HKHealthStore()
     var session: HKWorkoutSession?
     var builder: HKLiveWorkoutBuilder?
@@ -21,6 +13,8 @@ class WorkoutManager: NSObject, ObservableObject {
     @Published var running = false
     @Published var heartRate: Double = 0
     @Published var statusMessage: String = ""
+    /// True when iPhone initiated a 25s stress measurement (watch is sensor-only).
+    @Published var isStressMeasurementActive = false
     
     // Sleep data from iPhone
     @Published var sleepDebtData: SleepDebtData?
@@ -35,10 +29,17 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     func startWorkout() {
+        startStressMeasurement()
+    }
+
+    /// Started remotely from iPhone — watch streams HR only; no local controls.
+    func startStressMeasurement() {
+        guard !isStressMeasurementActive else { return }
+
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = selectedWorkout
         configuration.locationType = .indoor
-        
+
         do {
             session = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
             builder = session?.associatedWorkoutBuilder()
@@ -46,23 +47,30 @@ class WorkoutManager: NSObject, ObservableObject {
             statusMessage = "Failed to create workout session"
             return
         }
-        
-        builder?.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore,
-                                                     workoutConfiguration: configuration)
-        
+
+        builder?.dataSource = HKLiveWorkoutDataSource(
+            healthStore: healthStore,
+            workoutConfiguration: configuration
+        )
+
         session?.delegate = self
         builder?.delegate = self
-        
+
         let startDate = Date()
         session?.startActivity(with: startDate)
-        builder?.beginCollection(withStart: startDate) { (success, error) in
+        builder?.beginCollection(withStart: startDate) { success, _ in
             DispatchQueue.main.async {
-                self.running = success
                 if success {
-                    self.statusMessage = "Measuring started"
-                    self.sendMessageToPhone(["workoutActive": true, "status": "Workout started"])
+                    self.isStressMeasurementActive = true
+                    self.running = true
+                    self.statusMessage = ""
+                    self.sendMessageToPhone([
+                        "workoutActive": true,
+                        "stressMeasurementActive": true,
+                        "status": "Stress measurement started"
+                    ])
                 } else {
-                    self.statusMessage = "Failed to start workout"
+                    self.statusMessage = "Failed to start measurement"
                 }
             }
         }
@@ -89,16 +97,27 @@ class WorkoutManager: NSObject, ObservableObject {
     }
     
     func endWorkout() {
-        session?.end()
-        showingSummaryView = true
-        sendMessageToPhone(["workoutActive": false, "status": "Workout ended"])
+        stopStressMeasurement()
     }
-    
+
+    func stopStressMeasurement() {
+        guard isStressMeasurementActive || running else { return }
+
+        isStressMeasurementActive = false
+        session?.end()
+        sendMessageToPhone([
+            "workoutActive": false,
+            "stressMeasurementActive": false,
+            "status": "Stress measurement ended"
+        ])
+    }
+
     func resetWorkout() {
         selectedWorkout = .other
         builder = nil
         session = nil
         running = false
+        isStressMeasurementActive = false
         heartRate = 0
         statusMessage = ""
     }
@@ -111,7 +130,19 @@ class WorkoutManager: NSObject, ObservableObject {
         }
     }
     
-    // Parse sleep data from iPhone
+    // Parse sleep + stress context from iPhone (keys kept separate).
+    private func parseApplicationContext(_ context: [String: Any]) {
+        if let stressActive = context["stressMeasurementActive"] as? Bool {
+            if stressActive, !isStressMeasurementActive {
+                startStressMeasurement()
+            } else if !stressActive, isStressMeasurementActive {
+                stopStressMeasurement()
+            }
+        }
+
+        parseSleepData(from: context)
+    }
+
     private func parseSleepData(from context: [String: Any]) {
         // Parse Sleep Debt Data
         if let debtDict = context["sleepDebt"] as? [String: Any] {
@@ -155,6 +186,10 @@ extension WorkoutManager: HKWorkoutSessionDelegate {
                        from fromState: HKWorkoutSessionState, date: Date) {
         DispatchQueue.main.async {
             self.running = toState == .running
+            if toState == .ended || toState == .stopped {
+                self.isStressMeasurementActive = false
+                self.resetWorkout()
+            }
         }
     }
     
@@ -214,11 +249,11 @@ extension WorkoutManager: WCSessionDelegate {
             DispatchQueue.main.async {
                 switch action {
                 case "startWorkout":
-                    self.startWorkout()
-                    replyHandler(["status": "workout started"])
+                    self.startStressMeasurement()
+                    replyHandler(["status": "stress measurement started"])
                 case "stopWorkout":
-                    self.endWorkout()
-                    replyHandler(["status": "workout stopped"])
+                    self.stopStressMeasurement()
+                    replyHandler(["status": "stress measurement stopped"])
                 default:
                     replyHandler(["status": "unknown action"])
                 }
@@ -226,11 +261,10 @@ extension WorkoutManager: WCSessionDelegate {
         }
     }
     
-    // NEW: Receive application context updates from iPhone
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
         DispatchQueue.main.async {
-            self.parseSleepData(from: applicationContext)
-            print("Received sleep data from iPhone")
+            self.parseApplicationContext(applicationContext)
+            print("Received application context from iPhone")
         }
     }
 }

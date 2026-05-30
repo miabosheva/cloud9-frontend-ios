@@ -6,9 +6,13 @@ import SwiftUI
 class WatchConnectivityManager: NSObject, WCSessionDelegate {
     var currentHeartRate: Double = 0.0
     var isWorkoutActive: Bool = false
+    var isStressMeasurementActive: Bool = false
     var isWatchConnected: Bool = false
     var statusMessage: String = ""
     var measurementTimestamp: Date? = nil
+
+    /// Last application context payload sent to Watch (sleep + stress keys kept separate).
+    private var watchApplicationContext: [String: Any] = [:]
     
     override init() {
         super.init()
@@ -23,28 +27,49 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             statusMessage = "Apple Watch not reachable"
             return
         }
-        
-        WCSession.default.sendMessage(["action": "startWorkout"]) { response in
-            // Handle response if needed
+
+        syncStressMeasurementActive(true)
+
+        WCSession.default.sendMessage(["action": "startWorkout"]) { _ in
         } errorHandler: { error in
             DispatchQueue.main.async {
                 self.statusMessage = "Failed to start workout: \(error.localizedDescription)"
+                self.syncStressMeasurementActive(false)
             }
         }
     }
-    
+
     func stopWorkout() {
         guard WCSession.default.isReachable else {
             statusMessage = "Apple Watch not reachable"
+            syncStressMeasurementActive(false)
             return
         }
-        
-        WCSession.default.sendMessage(["action": "stopWorkout"]) { response in
-            // Handle response if needed
+
+        syncStressMeasurementActive(false)
+
+        WCSession.default.sendMessage(["action": "stopWorkout"]) { _ in
         } errorHandler: { error in
             DispatchQueue.main.async {
                 self.statusMessage = "Failed to stop workout: \(error.localizedDescription)"
             }
+        }
+    }
+
+    /// Stress measurement flag — separate from sleep context keys on Watch.
+    private func syncStressMeasurementActive(_ active: Bool) {
+        isStressMeasurementActive = active
+        isWorkoutActive = active
+        watchApplicationContext["stressMeasurementActive"] = active
+        pushWatchApplicationContext()
+    }
+
+    private func pushWatchApplicationContext() {
+        guard WCSession.default.activationState == .activated else { return }
+        do {
+            try WCSession.default.updateApplicationContext(watchApplicationContext)
+        } catch {
+            print("Error updating watch application context: \(error.localizedDescription)")
         }
     }
     
@@ -69,15 +94,10 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             "dataQualityColor": dataQualityColor,
             "missingDaysCount": sleepDebtResult.baseResult.missingDays.count
         ]
-        
-        let context: [String: Any] = ["sleepDebt": sleepDebtDict]
-        
-        do {
-            try WCSession.default.updateApplicationContext(context)
-            print("Sleep debt data sent to watch")
-        } catch {
-            print("Error sending sleep debt data: \(error.localizedDescription)")
-        }
+
+        watchApplicationContext["sleepDebt"] = sleepDebtDict
+        pushWatchApplicationContext()
+        print("Sleep debt data sent to watch")
     }
     
     /// Send sleep quality data to Apple Watch
@@ -92,14 +112,9 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             "quality": quality ?? "N/A"
         ]
         
-        let context: [String: Any] = ["sleepQuality": sleepQualityDict]
-        
-        do {
-            try WCSession.default.updateApplicationContext(context)
-            print("Sleep quality data sent to watch")
-        } catch {
-            print("Error sending sleep quality data: \(error.localizedDescription)")
-        }
+        watchApplicationContext["sleepQuality"] = sleepQualityDict
+        pushWatchApplicationContext()
+        print("Sleep quality data sent to watch")
     }
     
     /// Send both sleep debt and quality data together
@@ -127,17 +142,10 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             "quality": quality ?? "N/A"
         ]
         
-        let context: [String: Any] = [
-            "sleepDebt": sleepDebtDict,
-            "sleepQuality": sleepQualityDict
-        ]
-        
-        do {
-            try WCSession.default.updateApplicationContext(context)
-            print("All sleep data sent to watch")
-        } catch {
-            print("Error sending sleep data: \(error.localizedDescription)")
-        }
+        watchApplicationContext["sleepDebt"] = sleepDebtDict
+        watchApplicationContext["sleepQuality"] = sleepQualityDict
+        pushWatchApplicationContext()
+        print("All sleep data sent to watch")
     }
     
     // MARK: - Helper Methods
@@ -203,6 +211,11 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             
             if let workoutActive = message["workoutActive"] as? Bool {
                 self.isWorkoutActive = workoutActive
+            }
+
+            if let stressActive = message["stressMeasurementActive"] as? Bool {
+                self.isStressMeasurementActive = stressActive
+                self.isWorkoutActive = stressActive
             }
             
             if let status = message["status"] as? String {

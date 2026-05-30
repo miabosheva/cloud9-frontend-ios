@@ -26,9 +26,6 @@ struct HealthMetricsGrid: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 16) {
-                // Stress prediction card at the top
-                StressPredictionCard(watchConnector: watchConnector)
-                
                 RealTimeHeartRateCard(watchConnector: watchConnector, showingInfoAlert: $showingInfoAlert)
                 
                 if let sleepDebtResult = healthManager.sleepDebtResult {
@@ -52,4 +49,5 @@ struct HealthMetricsGrid: View {
         showingInfoAlert: .constant(false)
     )
     .environment(HealthManager())
+    .environmentObject(StressPromptManager(watchConnector: WatchConnectivityManager()))
 }

@@ -7,6 +7,7 @@ struct PrimaryButtonStyle26Adaptive: ButtonStyle {
         if #available(iOS 26, *) {
             configuration.label
                 .font(.headline)
+                .multilineTextAlignment(.center)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 20)
                 .frame(maxWidth: .infinity)
@@ -18,6 +19,7 @@ struct PrimaryButtonStyle26Adaptive: ButtonStyle {
         } else {
             configuration.label
                 .font(.headline)
+                .multilineTextAlignment(.center)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 16)
                 .frame(maxWidth: .infinity)
@@ -34,6 +36,7 @@ struct SecondaryButtonStyle26Adaptive: ButtonStyle {
         if #available(iOS 26, *) {
             configuration.label
                 .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 16)
                 .background(
@@ -44,6 +47,7 @@ struct SecondaryButtonStyle26Adaptive: ButtonStyle {
         } else {
             configuration.label
                 .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 16)
                 .background(Color.clear)

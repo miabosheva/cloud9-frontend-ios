@@ -25,15 +25,24 @@ struct HeaderSection: View {
                 
                 Button(action: onProfileTap) {
                     ZStack {
-                        Circle()
-                            .fill(Color.blue.opacity(0.1))
-                            .frame(width: 44, height: 44)
-                        
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
+                        if #available(iOS 26.0, *) {
+                            Circle()
+                                .frame(width: 44, height: 44)
+                                .glassEffect()
+                        } else {
+                            Circle()
+                                .fill(Color.black.opacity(0.3))
+                                .frame(width: 44, height: 44)
+                        }
+
+                        Image(systemName: "person")
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundStyle(.background)
                     }
+                    .contentShape(Circle())
                 }
+                .buttonStyle(ProfileIconButtonStyle())
+                .accessibilityLabel("Profile")
             }
             .padding(.horizontal, 20)
             .padding(.top, 10)
@@ -48,5 +57,14 @@ struct HeaderSection: View {
         case 17..<21: return "Good evening"
         default: return "Good night"
         }
+    }
+}
+
+private struct ProfileIconButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }

@@ -20,6 +20,18 @@ class StressDataCollector: ObservableObject {
     @Published var countdown: Int = 25
     @Published var errorMessage: String?
 
+    static let totalSeconds = Int(StressFeatureExtractor.windowDuration)
+
+    /// Seconds elapsed during an active measurement (0…25).
+    var elapsedSeconds: Int {
+        guard isCollecting else { return 0 }
+        return Self.totalSeconds - countdown
+    }
+
+    var progressFraction: Double {
+        Double(elapsedSeconds) / Double(Self.totalSeconds)
+    }
+
     private var predictor: StressEnsemblePredictor?
 
     init(watchConnector: WatchConnectivityManager) {
@@ -62,7 +74,19 @@ class StressDataCollector: ObservableObject {
         }
     }
 
-    // MARK: - Start Collection
+    // MARK: - Session Lifecycle
+
+    /// Resets UI state when opening the measurement screen (does not start workout).
+    func prepareForNewSession() {
+        stopCollection()
+        currentPrediction = nil
+        errorMessage = nil
+    }
+
+    /// Cancels workout, discards samples, clears prediction — no inference.
+    func cancelCollection() {
+        prepareForNewSession()
+    }
 
     func startCollection() {
         guard predictor != nil else {
@@ -76,7 +100,7 @@ class StressDataCollector: ObservableObject {
         }
 
         isCollecting = true
-        countdown = Int(windowDuration)
+        countdown = Self.totalSeconds
         heartRateBuffer.removeAll()
         errorMessage = nil
         currentPrediction = nil
@@ -189,7 +213,7 @@ class StressDataCollector: ObservableObject {
         heartRateSamplingTimer = nil
         watchConnector.stopWorkout()
         heartRateBuffer.removeAll()
-        countdown = Int(windowDuration)
+        countdown = Self.totalSeconds
         lastKnownHeartRate = 0.0
         collectionStartTime = nil
     }
@@ -215,6 +239,19 @@ class StressDataCollector: ObservableObject {
             return
         }
 
+        let windowEnd = Date()
+        let windowStart = collectionStartTime ?? cutoffTime
+        let windowMetrics = await StressMeasurementHealthKitContext.fetchWindowMetrics(
+            healthStore: healthStore,
+            from: windowStart,
+            to: windowEnd
+        )
+        let activityType = StressActivityClassifier.classify(
+            features: features,
+            stepsInWindow: windowMetrics.steps,
+            activeEnergyKcal: windowMetrics.activeEnergyKcal
+        )
+
         guard let predictor else {
             errorMessage = "Stress prediction models not available"
             stopCollection()
@@ -231,7 +268,12 @@ class StressDataCollector: ObservableObject {
                 annNormalized: result.annNormalized,
                 timestamp: Date(),
                 features: features,
-                hrSampleCount: hrValues.count
+                hrValues: hrValues,
+                hrSampleCount: hrValues.count,
+                measurementStartedAt: collectionStartTime,
+                stepsInWindow: windowMetrics.steps,
+                activeEnergyKcal: windowMetrics.activeEnergyKcal,
+                activityType: activityType
             )
 
             isCollecting = false
@@ -253,7 +295,12 @@ struct StressPrediction: Equatable {
     let annNormalized: Double
     let timestamp: Date
     let features: StressHRFeatures
+    let hrValues: [Double]
     let hrSampleCount: Int
+    let measurementStartedAt: Date?
+    let stepsInWindow: Int
+    let activeEnergyKcal: Double
+    let activityType: StressActivityType
 
     var confidenceScore: Double {
         max(ensembleRaw, 1.0 - ensembleRaw)

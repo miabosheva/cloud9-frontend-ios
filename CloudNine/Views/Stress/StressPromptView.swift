@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StressPromptView: View {
     let onSubmit: (Int) -> Void
+    let onSkip: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedValue: Double = 5
@@ -53,7 +54,8 @@ struct StressPromptView: View {
             .padding(.horizontal)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("Skip") {
+                        onSkip()
                         dismiss()
                     }
                 }
@@ -63,6 +65,6 @@ struct StressPromptView: View {
 }
 
 #Preview {
-    StressPromptView { _ in }
+    StressPromptView(onSubmit: { _ in }, onSkip: {})
 }
 
