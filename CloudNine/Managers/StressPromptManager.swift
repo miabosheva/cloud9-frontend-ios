@@ -35,7 +35,6 @@ class StressPromptManager: ObservableObject {
         currentPrediction = prediction
         isShowingDataCollection = false
 
-        // After data collection, show user prompt (model result is not shown).
         promptShownAt = Date()
         isShowingPrompt = true
     }
@@ -50,18 +49,15 @@ class StressPromptManager: ObservableObject {
         let responseAt = Date()
         let latency = Int(responseAt.timeIntervalSince(promptShownAt))
 
-        let confidence = prediction.probability[prediction.probability.keys.max() ?? 0] ?? 0.0
-        let features = prediction.features
-
         let sample = StressMeasurementSample(
-            hrMean: features.hrMean,
-            hrStd: features.hrStd,
-            hrvSDNN: features.hrvSDNN,
-            lfHfRatio: features.lfHfRatio,
+            features: prediction.features,
+            hrSampleCount: prediction.hrSampleCount,
             modelPrediction: prediction.stressLevel,
-            confidenceScore: confidence,
+            ensembleRaw: prediction.ensembleRaw,
+            xgbProbability: prediction.xgbProbability,
+            annNormalized: prediction.annNormalized,
+            confidenceScore: prediction.confidenceScore,
             userPrediction: value,
-            phase: StressPhaseConfig.currentPhase,
             responseLatencySeconds: latency,
             activityType: "unknown",
             isTest: isTestFlow
@@ -92,4 +88,3 @@ class StressPromptManager: ObservableObject {
         return newCollector
     }
 }
-

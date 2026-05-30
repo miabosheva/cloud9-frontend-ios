@@ -60,15 +60,13 @@ struct StressDataCollectionView: View {
         .onChange(of: collector.currentPrediction) { _, prediction in
             guard let prediction else { return }
 
-            // Print collected data for debugging / thesis logging.
             let features = prediction.features
             print("📦 Collected stress prediction from watch:")
-            print("   HR mean: \(features.hrMean)")
-            print("   HR std: \(features.hrStd)")
-            print("   HRV SDNN: \(features.hrvSDNN)")
-            print("   LF/HF ratio: \(features.lfHfRatio)")
-            print("   Model stress level: \(prediction.stressLevel)")
-            print("   Class probabilities: \(prediction.probability)")
+            print("   HR samples: \(prediction.hrSampleCount)")
+            print("   hrrange: \(features.hrrange), hrvar: \(features.hrvar), hrstd: \(features.hrstd)")
+            print("   hrmin: \(features.hrmin), hrmax: \(features.hrmax), hrkurt: \(features.hrkurt)")
+            print("   XGB: \(prediction.xgbProbability), ANN norm: \(prediction.annNormalized)")
+            print("   Ensemble: \(prediction.ensembleRaw) → stress level: \(prediction.stressLevel)")
 
             onCompleted(prediction)
             dismiss()
