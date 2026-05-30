@@ -15,6 +15,19 @@ final class NotificationHandler: NSObject, ObservableObject, UNUserNotificationC
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        let userInfo = notification.request.content.userInfo
+        if let type = userInfo["type"] as? String, type == "stress_prompt" {
+            completionHandler([.banner, .sound])
+            return
+        }
+        completionHandler([])
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
@@ -27,4 +40,3 @@ final class NotificationHandler: NSObject, ObservableObject, UNUserNotificationC
         completionHandler()
     }
 }
-

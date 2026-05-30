@@ -1,11 +1,20 @@
 import SwiftUI
 
 struct StressPromptView: View {
+    let initialValue: Int
     let onSubmit: (Int) -> Void
     let onSkip: () -> Void
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedValue: Double = 5
+    @State private var selectedValue: Double
+
+    init(initialValue: Int, onSubmit: @escaping (Int) -> Void, onSkip: @escaping () -> Void) {
+        self.initialValue = initialValue
+        self.onSubmit = onSubmit
+        self.onSkip = onSkip
+        let clamped = min(max(initialValue, 1), 10)
+        _selectedValue = State(initialValue: Double(clamped))
+    }
 
     var body: some View {
         NavigationStack {
@@ -65,6 +74,6 @@ struct StressPromptView: View {
 }
 
 #Preview {
-    StressPromptView(onSubmit: { _ in }, onSkip: {})
+    StressPromptView(initialValue: 2, onSubmit: { _ in }, onSkip: {})
 }
 

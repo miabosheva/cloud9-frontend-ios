@@ -8,55 +8,81 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
     var isWorkoutActive: Bool = false
     var isStressMeasurementActive: Bool = false
     var isWatchConnected: Bool = false
+    var isPaired: Bool = false
+    var isWatchAppInstalled: Bool = false
+    var readiness: WatchReadiness = .unavailable(reason: "Connecting to Apple Watch…")
     var statusMessage: String = ""
     var measurementTimestamp: Date? = nil
 
-    /// Last application context payload sent to Watch (sleep + stress keys kept separate).
     private var watchApplicationContext: [String: Any] = [:]
-    
+
     override init() {
         super.init()
         if WCSession.isSupported() {
             WCSession.default.delegate = self
             WCSession.default.activate()
         }
+        refreshReadiness()
     }
-    
-    func startWorkout() {
-        guard WCSession.default.isReachable else {
-            statusMessage = "Apple Watch not reachable"
-            return
+
+    func refreshReadiness() {
+        let session = WCSession.default
+        isPaired = session.isPaired
+        isWatchAppInstalled = session.isWatchAppInstalled
+        isWatchConnected = session.activationState == .activated && session.isWatchAppInstalled
+        readiness = WatchReadiness.evaluate(session: session)
+    }
+
+    // MARK: - Stress measurement (context-first)
+
+    /// Starts a Watch workout via application context; uses sendMessage when reachable.
+    @discardableResult
+    func requestStressMeasurementStart() -> WatchMeasurementStartResult? {
+        refreshReadiness()
+        guard readiness.canStartMeasurement else {
+            statusMessage = readiness.statusLabel
+            return nil
         }
 
         syncStressMeasurementActive(true)
 
-        WCSession.default.sendMessage(["action": "startWorkout"]) { _ in
-        } errorHandler: { error in
-            DispatchQueue.main.async {
-                self.statusMessage = "Failed to start workout: \(error.localizedDescription)"
-                self.syncStressMeasurementActive(false)
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(["action": "startWorkout"]) { _ in
+            } errorHandler: { error in
+                DispatchQueue.main.async {
+                    print("⚠️ sendMessage startWorkout failed: \(error.localizedDescription)")
+                }
             }
         }
+
+        return .workoutStarted
+    }
+
+    /// Waits until the Watch confirms a workout or times out.
+    func waitForWorkoutStart(timeout: TimeInterval = 10) async -> WatchMeasurementStartResult {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if isStressMeasurementActive || isWorkoutActive {
+                return .workoutStarted
+            }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        return .timedOut
     }
 
     func stopWorkout() {
-        guard WCSession.default.isReachable else {
-            statusMessage = "Apple Watch not reachable"
-            syncStressMeasurementActive(false)
-            return
-        }
-
         syncStressMeasurementActive(false)
 
-        WCSession.default.sendMessage(["action": "stopWorkout"]) { _ in
-        } errorHandler: { error in
-            DispatchQueue.main.async {
-                self.statusMessage = "Failed to stop workout: \(error.localizedDescription)"
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(["action": "stopWorkout"]) { _ in
+            } errorHandler: { error in
+                DispatchQueue.main.async {
+                    print("⚠️ sendMessage stopWorkout failed: \(error.localizedDescription)")
+                }
             }
         }
     }
 
-    /// Stress measurement flag — separate from sleep context keys on Watch.
     private func syncStressMeasurementActive(_ active: Bool) {
         isStressMeasurementActive = active
         isWorkoutActive = active
@@ -72,19 +98,18 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             print("Error updating watch application context: \(error.localizedDescription)")
         }
     }
-    
+
     // MARK: - Sleep Data Sending
-    
-    /// Send sleep debt data to Apple Watch
+
     func sendSleepDebtData(_ sleepDebtResult: AutomatedSleepDebtResult) {
         guard WCSession.default.activationState == .activated else {
             print("WCSession not activated")
             return
         }
-        
+
         let efficiencyColor = efficiencyColorString(for: sleepDebtResult.baseResult.efficiency)
         let dataQualityColor = dataQualityColorString(for: sleepDebtResult.dataQuality.grade)
-        
+
         let sleepDebtDict: [String: Any] = [
             "totalDebt": sleepDebtResult.baseResult.formattedTotalDebt,
             "severity": sleepDebtResult.baseResult.severity.rawValue,
@@ -97,37 +122,25 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
 
         watchApplicationContext["sleepDebt"] = sleepDebtDict
         pushWatchApplicationContext()
-        print("Sleep debt data sent to watch")
     }
-    
-    /// Send sleep quality data to Apple Watch
+
     func sendSleepQualityData(duration: String?, quality: String?) {
-        guard WCSession.default.activationState == .activated else {
-            print("WCSession not activated")
-            return
-        }
-        
-        let sleepQualityDict: [String: Any] = [
+        guard WCSession.default.activationState == .activated else { return }
+
+        watchApplicationContext["sleepQuality"] = [
             "duration": duration ?? "N/A",
             "quality": quality ?? "N/A"
         ]
-        
-        watchApplicationContext["sleepQuality"] = sleepQualityDict
         pushWatchApplicationContext()
-        print("Sleep quality data sent to watch")
     }
-    
-    /// Send both sleep debt and quality data together
+
     func sendAllSleepData(_ sleepDebtResult: AutomatedSleepDebtResult, duration: String?, quality: String?) {
-        guard WCSession.default.activationState == .activated else {
-            print("WCSession not activated")
-            return
-        }
-        
+        guard WCSession.default.activationState == .activated else { return }
+
         let efficiencyColor = efficiencyColorString(for: sleepDebtResult.baseResult.efficiency)
         let dataQualityColor = dataQualityColorString(for: sleepDebtResult.dataQuality.grade)
-        
-        let sleepDebtDict: [String: Any] = [
+
+        watchApplicationContext["sleepDebt"] = [
             "totalDebt": sleepDebtResult.baseResult.formattedTotalDebt,
             "severity": sleepDebtResult.baseResult.severity.rawValue,
             "efficiency": Int(sleepDebtResult.baseResult.efficiency),
@@ -136,20 +149,16 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
             "dataQualityColor": dataQualityColor,
             "missingDaysCount": sleepDebtResult.baseResult.missingDays.count
         ]
-        
-        let sleepQualityDict: [String: Any] = [
+
+        watchApplicationContext["sleepQuality"] = [
             "duration": duration ?? "N/A",
             "quality": quality ?? "N/A"
         ]
-        
-        watchApplicationContext["sleepDebt"] = sleepDebtDict
-        watchApplicationContext["sleepQuality"] = sleepQualityDict
         pushWatchApplicationContext()
-        print("All sleep data sent to watch")
     }
-    
-    // MARK: - Helper Methods
-    
+
+    // MARK: - Helpers
+
     private func efficiencyColorString(for efficiency: Double) -> String {
         switch efficiency {
         case 90...: return "green"
@@ -158,7 +167,7 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
         default: return "red"
         }
     }
-    
+
     private func dataQualityColorString(for grade: String) -> String {
         switch grade {
         case "A": return "green"
@@ -168,47 +177,49 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
         default: return "gray"
         }
     }
-    
+
     // MARK: - WCSessionDelegate
-    
+
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async {
-            self.isWatchConnected = (activationState == .activated && session.isWatchAppInstalled)
-            if let error = error {
+            self.refreshReadiness()
+            if let error {
                 self.statusMessage = "Watch connection error: \(error.localizedDescription)"
-            } else {
-                self.statusMessage = "Watch connected: \(self.isWatchConnected)"
             }
         }
     }
-    
+
     func sessionDidBecomeInactive(_ session: WCSession) {
         DispatchQueue.main.async {
-            self.isWatchConnected = false
+            self.refreshReadiness()
         }
     }
-    
+
     func sessionDidDeactivate(_ session: WCSession) {
         DispatchQueue.main.async {
-            self.isWatchConnected = false
+            self.refreshReadiness()
         }
         session.activate()
     }
-    
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+
+    func sessionReachabilityDidChange(_ session: WCSession) {
+        DispatchQueue.main.async {
+            self.refreshReadiness()
+        }
+    }
+
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         DispatchQueue.main.async {
             if let heartRate = message["heartRate"] as? Double {
                 self.currentHeartRate = heartRate
                 self.measurementTimestamp = Date.now
-                
-                // Post notification for stress collector
                 NotificationCenter.default.post(
                     name: NSNotification.Name("HeartRateUpdated"),
                     object: nil,
                     userInfo: ["heartRate": heartRate]
                 )
             }
-            
+
             if let workoutActive = message["workoutActive"] as? Bool {
                 self.isWorkoutActive = workoutActive
             }
@@ -217,26 +228,10 @@ class WatchConnectivityManager: NSObject, WCSessionDelegate {
                 self.isStressMeasurementActive = stressActive
                 self.isWorkoutActive = stressActive
             }
-            
+
             if let status = message["status"] as? String {
                 self.statusMessage = status
             }
         }
     }
 }
-
-// MARK: - Usage Examples
-/*
- // Send sleep debt data when it updates
- watchConnectivityManager.sendSleepDebtData(sleepDebtResult)
- 
- // Send sleep quality data when it updates
- watchConnectivityManager.sendSleepQualityData(duration: "8h 0m", quality: "Good")
- 
- // Send both at once
- watchConnectivityManager.sendAllSleepData(
-     sleepDebtResult,
-     duration: "8h 0m",
-     quality: "Good"
- )
- */

@@ -127,6 +127,8 @@ class WorkoutManager: NSObject, ObservableObject {
             WCSession.default.sendMessage(message, replyHandler: nil) { error in
                 print("Error sending message: \(error.localizedDescription)")
             }
+        } else {
+            WCSession.default.transferUserInfo(message)
         }
     }
     

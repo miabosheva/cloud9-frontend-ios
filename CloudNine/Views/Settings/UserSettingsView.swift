@@ -5,6 +5,7 @@ struct UserSettingsView: View {
     @Environment(HealthManager.self) var healthManager
     @Environment(ErrorManager.self) var errorManager
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var stressPromptManager: StressPromptManager
     
     private var userManager = UserManager()
     
@@ -57,6 +58,48 @@ struct UserSettingsView: View {
                 Label("Sleep Schedule", systemImage: "clock.circle")
             } footer: {
                 Text("Set your preferred sleep and wake times for consistent scheduling.")
+            }
+
+            // Stress check-ins
+            Section {
+                HStack {
+                    Image(systemName: "brain.head.profile")
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.orange, .red],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 24)
+
+                    Text("Today's check-ins")
+                    Spacer()
+                    Text("\(stressPromptManager.completedTodayCount) / \(stressPromptManager.dailyTarget)")
+                        .font(.body.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(stressPromptManager.completedTodayCount >= stressPromptManager.dailyTarget ? .green : .primary)
+                }
+
+                ProgressView(
+                    value: Double(min(stressPromptManager.completedTodayCount, stressPromptManager.dailyTarget)),
+                    total: Double(stressPromptManager.dailyTarget)
+                )
+                .tint(stressPromptManager.completedTodayCount >= stressPromptManager.dailyTarget ? .green : .orange)
+
+                if stressPromptManager.completedTodayCount >= stressPromptManager.dailyTarget {
+                    Label("Daily goal complete", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.green)
+                } else {
+                    Text("\(stressPromptManager.dailyTarget - stressPromptManager.completedTodayCount) remaining today")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Label("Stress Check-Ins", systemImage: "bell.badge")
+            } footer: {
+                Text("Goal: 4 measurements per day between 9 AM and 9 PM. Wear your Apple Watch on your wrist, allow Health permissions on iPhone and Watch, and open CloudNine on your Watch if prompted. Notification and manual measurements both count.")
             }
             
             // Sleep Goal Section
@@ -285,6 +328,10 @@ struct UserSettingsView: View {
                 return
             }
             await loadUserInfo()
+            await stressPromptManager.refreshDailyStateAndReconcile()
+        }
+        .onAppear {
+            Task { await stressPromptManager.refreshDailyStateAndReconcile() }
         }
     }
     

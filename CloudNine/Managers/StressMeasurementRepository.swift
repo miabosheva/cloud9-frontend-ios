@@ -43,6 +43,7 @@ actor StressMeasurementRepository {
             "user_rating_status": sample.userRatingStatus.rawValue,
             "activity_type": sample.activityType,
             "is_test": sample.isTest,
+            "watch_workout_started": sample.watchWorkoutStarted,
             "id": sample.id
         ]
 
@@ -60,5 +61,26 @@ actor StressMeasurementRepository {
 
         try await collection.document(sample.id).setData(dict, merge: false)
         print("✅ Saved stress measurement sample \(sample.id) (\(sample.userRatingStatus.rawValue))")
+    }
+
+    /// Non-test measurements completed on the given calendar day.
+    func countNonTestSamples(on date: Date) async throws -> Int {
+        guard let collection = samplesCollection else {
+            throw UserManagerError.userNotAuthenticated
+        }
+
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
+            return 0
+        }
+
+        let snapshot = try await collection
+            .whereField("is_test", isEqualTo: false)
+            .whereField("timestamp", isGreaterThanOrEqualTo: Timestamp(date: start))
+            .whereField("timestamp", isLessThan: Timestamp(date: end))
+            .getDocuments()
+
+        return snapshot.documents.count
     }
 }

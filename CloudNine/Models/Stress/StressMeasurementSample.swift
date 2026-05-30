@@ -45,6 +45,7 @@ struct StressMeasurementSample: Codable, Identifiable {
     var activityType: String
     var responseLatencySeconds: Int?
     var isTest: Bool
+    var watchWorkoutStarted: Bool
 
     init(
         id: String = UUID().uuidString,
@@ -64,7 +65,8 @@ struct StressMeasurementSample: Codable, Identifiable {
         userRatingStatus: UserRatingStatus,
         responseLatencySeconds: Int?,
         activityType: StressActivityType,
-        isTest: Bool
+        isTest: Bool,
+        watchWorkoutStarted: Bool = true
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -89,5 +91,6 @@ struct StressMeasurementSample: Codable, Identifiable {
         self.responseLatencySeconds = responseLatencySeconds
         self.activityType = activityType.rawValue
         self.isTest = isTest
+        self.watchWorkoutStarted = watchWorkoutStarted
     }
 }

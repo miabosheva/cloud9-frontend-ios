@@ -18,8 +18,24 @@ struct StressPredictionCard: View {
                 Text("Stress")
                     .font(.headline)
                     .fontWeight(.semibold)
-                
+
                 Spacer()
+
+                Text("\(stressPromptManager.completedTodayCount)/\(stressPromptManager.dailyTarget) today")
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(
+                        stressPromptManager.completedTodayCount >= stressPromptManager.dailyTarget ? .green : .secondary
+                    )
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(
+                            stressPromptManager.completedTodayCount >= stressPromptManager.dailyTarget
+                                ? Color.green.opacity(0.12)
+                                : Color.orange.opacity(0.12)
+                        )
+                    )
             }
             
             HStack(alignment: .center, spacing: 20) {
@@ -33,8 +49,8 @@ struct StressPredictionCard: View {
                             Text(prediction.stressCategory)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                            
-                            Text("Last measurement")
+
+                            Text(prediction.timestamp.formatted(date: .abbreviated, time: .shortened))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

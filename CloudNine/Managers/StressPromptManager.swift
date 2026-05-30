@@ -9,6 +9,8 @@ class StressPromptManager: ObservableObject {
     @Published var isTestFlow = false
     @Published var lastSaveError: String?
     @Published var lastSaveSucceeded: Bool = false
+    @Published private(set) var completedTodayCount: Int
+    let dailyTarget = StressPromptDailyTracker.dailyTarget
 
     private let watchConnector: WatchConnectivityManager
     private let repository = StressMeasurementRepository()
@@ -18,6 +20,25 @@ class StressPromptManager: ObservableObject {
 
     init(watchConnector: WatchConnectivityManager) {
         self.watchConnector = watchConnector
+        self.completedTodayCount = StressPromptDailyTracker.shared.completedTodayCount
+    }
+
+    /// Syncs the local daily counter with Firestore and reconciles notifications.
+    func refreshDailyStateAndReconcile() async {
+        let dayChanged = StressPromptDailyTracker.shared.ensureCurrentDay()
+        var count = StressPromptDailyTracker.shared.completedTodayCount
+
+        if let remoteCount = try? await repository.countNonTestSamples(on: Date()), remoteCount > count {
+            StressPromptDailyTracker.shared.setCompletedCount(remoteCount)
+            count = remoteCount
+        }
+
+        completedTodayCount = count
+        await StressNotificationScheduler.shared.reconcile(completedCount: count)
+
+        if dayChanged {
+            print("📅 New day — reset stress prompt counter and rescheduled notifications")
+        }
     }
 
     func beginMeasurement(isTest: Bool) {
@@ -99,8 +120,14 @@ class StressPromptManager: ObservableObject {
             userRatingStatus: userRatingStatus,
             responseLatencySeconds: responseLatencySeconds,
             activityType: prediction.activityType,
-            isTest: isTestFlow
+            isTest: isTestFlow,
+            watchWorkoutStarted: prediction.watchWorkoutStarted
         )
+
+        if !isTestFlow {
+            StressPromptDailyTracker.shared.recordCompletion()
+            completedTodayCount = StressPromptDailyTracker.shared.completedTodayCount
+        }
 
         Task {
             do {
@@ -109,6 +136,9 @@ class StressPromptManager: ObservableObject {
                 lastSaveError = nil
                 let label = userPrediction.map(String.init) ?? "none"
                 print("✅ Saved stress sample (\(userRatingStatus.rawValue)), rating=\(label)")
+                if !isTestFlow {
+                    await StressNotificationScheduler.shared.reconcile(completedCount: completedTodayCount)
+                }
             } catch {
                 lastSaveSucceeded = false
                 lastSaveError = error.localizedDescription

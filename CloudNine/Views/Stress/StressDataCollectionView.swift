@@ -8,14 +8,24 @@ struct StressDataCollectionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var ringPulse = false
 
-    private var phase: Phase {
+    private var phase: ViewPhase {
         if let prediction = collector.currentPrediction, !collector.isCollecting {
             return .result(prediction)
         }
-        if collector.isCollecting {
+        switch collector.collectionPhase {
+        case .connecting, .waitingForHeartRate:
+            return .starting(collector.collectionPhase)
+        case .measuring:
             return .measuring
+        case .failed:
+            return .failed
+        case .idle:
+            return .prepare
         }
-        return .prepare
+    }
+
+    private var watchAppIsOpen: Bool {
+        collector.watchConnector.readiness == .interactive
     }
 
     var body: some View {
@@ -30,13 +40,14 @@ struct StressDataCollectionView: View {
                 switch phase {
                 case .prepare:
                     prepareContent
-                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                case .starting(let subphase):
+                    startingContent(subphase)
                 case .measuring:
                     measuringContent
-                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 case .result(let prediction):
                     resultContent(prediction)
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                case .failed:
+                    failedContent
                 }
 
                 Spacer(minLength: 24)
@@ -45,32 +56,22 @@ struct StressDataCollectionView: View {
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
-            .animation(.spring(response: 0.45, dampingFraction: 0.86), value: collector.isCollecting)
+            .animation(.spring(response: 0.45, dampingFraction: 0.86), value: collector.collectionPhase)
             .animation(.spring(response: 0.45, dampingFraction: 0.86), value: collector.currentPrediction?.stressLevel)
         }
         .onAppear {
             collector.prepareForNewSession()
-        }
-        .alert("Measurement Error", isPresented: errorAlertBinding) {
-            Button("OK") {
-                collector.errorMessage = nil
-            }
-        } message: {
-            if let error = collector.errorMessage {
-                Text(error)
-            }
+            collector.watchConnector.refreshReadiness()
         }
     }
 
-    // MARK: - Phase
-
-    private enum Phase {
+    private enum ViewPhase {
         case prepare
+        case starting(StressCollectionPhase)
         case measuring
         case result(StressPrediction)
+        case failed
     }
-
-    // MARK: - Layout
 
     private var backgroundGradient: some View {
         LinearGradient(
@@ -113,8 +114,6 @@ struct StressDataCollectionView: View {
         .padding(.top, 8)
     }
 
-    // MARK: - Prepare
-
     private var prepareContent: some View {
         VStack(spacing: 28) {
             stressIcon(large: true)
@@ -129,32 +128,96 @@ struct StressDataCollectionView: View {
                     .multilineTextAlignment(.center)
             }
 
+            watchReadinessCard
+
             VStack(alignment: .leading, spacing: 14) {
-                instructionRow(icon: "applewatch", text: "Open the CloudNine app on your Apple Watch before you start.")
+                instructionRow(
+                    icon: "applewatch",
+                    text: "Open the CloudNine app on your Apple Watch before you start."
+                )
                 instructionRow(icon: "hand.raised.fill", text: "Keep this screen open for the full 25 seconds.")
-                instructionRow(icon: "heart.fill", text: "Stay relaxed and breathe normally unless you're testing activity.")
+                instructionRow(icon: "heart.fill", text: "Stay relaxed and breathe normally.")
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white)
-                    .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.gray.opacity(0.1), lineWidth: 1)
-            )
+            .background(cardBackground)
         }
     }
 
-    // MARK: - Measuring
+    private var watchReadinessCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            readinessRow(
+                label: "Watch paired",
+                isOK: collector.watchConnector.isPaired
+            )
+            readinessRow(
+                label: "CloudNine installed on Watch",
+                isOK: collector.watchConnector.isWatchAppInstalled
+            )
+            readinessRow(
+                label: "CloudNine open on Watch",
+                isOK: watchAppIsOpen
+            )
+
+            Text(collector.watchConnector.readiness.statusLabel)
+                .font(.caption)
+                .foregroundStyle(watchAppIsOpen ? Color.secondary : Color.orange)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground)
+    }
+
+    private func startingContent(_ subphase: StressCollectionPhase) -> some View {
+        VStack(spacing: 24) {
+            ProgressView()
+                .scaleEffect(1.4)
+
+            Text(subphase == .connecting ? "Connecting to Apple Watch…" : "Waiting for heart rate…")
+                .font(.title3.weight(.semibold))
+
+            Text(subphase == .connecting
+                 ? "Make sure CloudNine is open on your Watch. We're starting a brief workout for accurate readings."
+                 : "Once we detect heart rate, the 25-second timer will begin.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            if collector.isDegradedMode {
+                Text("Using recent heart rate data — wear Watch on wrist for best results.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
 
     private var measuringContent: some View {
         VStack(spacing: 32) {
             ZStack {
                 Circle()
-                    .stroke(Color.orange.opacity(0.12), lineWidth: 14)
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Color.orange.opacity(ringPulse ? 0.18 : 0.10),
+                                Color.orange.opacity(0.04),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 70,
+                            endRadius: 118
+                        )
+                    )
+                    .frame(width: 236, height: 236)
+                    .scaleEffect(ringPulse ? 1.03 : 0.97)
+                    .animation(
+                        .easeInOut(duration: 1.4).repeatForever(autoreverses: true),
+                        value: ringPulse
+                    )
+
+                Circle()
+                    .stroke(Color.orange.opacity(0.14), lineWidth: 12)
 
                 Circle()
                     .trim(from: 0, to: collector.progressFraction)
@@ -164,10 +227,14 @@ struct StressDataCollectionView: View {
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        style: StrokeStyle(lineWidth: 14, lineCap: .round)
+                        style: StrokeStyle(lineWidth: 12, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 0.35), value: collector.elapsedSeconds)
+                    .animation(.linear(duration: 1.0), value: collector.elapsedSeconds)
+
+                Circle()
+                    .fill(Color(.systemBackground))
+                    .frame(width: 196, height: 196)
 
                 VStack(spacing: 6) {
                     Text("\(collector.elapsedSeconds)")
@@ -180,23 +247,15 @@ struct StressDataCollectionView: View {
                             )
                         )
                         .contentTransition(.numericText())
-                        .animation(.snappy, value: collector.elapsedSeconds)
 
                     Text("/ \(StressDataCollector.totalSeconds)")
                         .font(.title3.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
-
-                Circle()
-                    .stroke(Color.orange.opacity(ringPulse ? 0.25 : 0.05), lineWidth: 2)
-                    .scaleEffect(ringPulse ? 1.08 : 1.0)
-                    .animation(
-                        .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
-                        value: ringPulse
-                    )
             }
             .frame(width: 220, height: 220)
             .onAppear { ringPulse = true }
+            .onDisappear { ringPulse = false }
 
             VStack(spacing: 8) {
                 Text("Measuring…")
@@ -206,11 +265,16 @@ struct StressDataCollectionView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+
+                if collector.isDegradedMode {
+                    Text("Using recent heart rate data — wear Watch on wrist for best results.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.center)
+                }
             }
         }
     }
-
-    // MARK: - Result
 
     private func resultContent(_ prediction: StressPrediction) -> some View {
         VStack(spacing: 28) {
@@ -227,12 +291,9 @@ struct StressDataCollectionView: View {
 
                 Text(prediction.stressCategory)
                     .font(.headline)
-                    .foregroundStyle(.primary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
-                    .background(
-                        Capsule().fill(prediction.color.opacity(0.15))
-                    )
+                    .background(Capsule().fill(prediction.color.opacity(0.15)))
             }
 
             VStack(spacing: 4) {
@@ -244,10 +305,25 @@ struct StressDataCollectionView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
 
-    // MARK: - Bottom Action
+    private var failedContent: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(.orange)
+
+            Text("Measurement Failed")
+                .font(.title3.weight(.semibold))
+
+            if let error = collector.errorMessage {
+                Text(error)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
 
     @ViewBuilder
     private var bottomAction: some View {
@@ -259,22 +335,64 @@ struct StressDataCollectionView: View {
                 Text("Start Measuring")
             }
             .buttonStyle(PrimaryButtonStyle26Adaptive())
+            .disabled(!collector.watchConnector.readiness.canStartMeasurement)
+
+        case .starting:
+            EmptyView()
 
         case .measuring:
             EmptyView()
 
-        case .result(let prediction):
+        case .result:
             Button {
-                onCompleted(prediction)
-                dismiss()
+                if let prediction = collector.currentPrediction {
+                    onCompleted(prediction)
+                    dismiss()
+                }
             } label: {
                 Text("Close")
             }
             .buttonStyle(PrimaryButtonStyle26Adaptive())
+
+        case .failed:
+            VStack(spacing: 12) {
+                if collector.canRetry {
+                    Button {
+                        collector.watchConnector.refreshReadiness()
+                        collector.retryCollection()
+                    } label: {
+                        Text("Retry")
+                    }
+                    .buttonStyle(PrimaryButtonStyle26Adaptive())
+                }
+
+                Button("Cancel") {
+                    collector.cancelCollection()
+                    dismiss()
+                }
+                .foregroundStyle(.secondary)
+            }
         }
     }
 
-    // MARK: - Helpers
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 20)
+            .fill(Color.white)
+            .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+            )
+    }
+
+    private func readinessRow(label: String, isOK: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: isOK ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundStyle(isOK ? .green : .orange)
+            Text(label)
+                .font(.subheadline)
+        }
+    }
 
     private func stressIcon(large: Bool) -> some View {
         ZStack {
@@ -309,16 +427,8 @@ struct StressDataCollectionView: View {
 
             Text(text)
                 .font(.subheadline)
-                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    private var errorAlertBinding: Binding<Bool> {
-        Binding(
-            get: { collector.errorMessage != nil && !collector.isCollecting && collector.currentPrediction == nil },
-            set: { if !$0 { collector.errorMessage = nil } }
-        )
     }
 }
 

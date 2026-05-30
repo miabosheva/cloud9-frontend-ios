@@ -3,26 +3,41 @@ import HealthKit
 import WatchConnectivity
 import SwiftUI
 
+enum StressCollectionPhase: Equatable {
+    case idle
+    case connecting
+    case waitingForHeartRate
+    case measuring
+    case failed
+}
+
 @MainActor
 class StressDataCollector: ObservableObject {
     private let healthStore = HKHealthStore()
-    private let watchConnector: WatchConnectivityManager
+    let watchConnector: WatchConnectivityManager
     private var heartRateBuffer: [(value: Double, timestamp: Date)] = []
     private let windowDuration: TimeInterval = StressFeatureExtractor.windowDuration
     private var predictionTimer: Timer?
     private var heartRateSamplingTimer: Timer?
     private var heartRateObserver: NSObjectProtocol?
+    private var heartRateWindowSampler: HeartRateWindowSampler?
     private var lastKnownHeartRate: Double = 0.0
     private var collectionStartTime: Date?
+    private var measurementWindowStart: Date?
+    private var collectionTask: Task<Void, Never>?
 
+    @Published var collectionPhase: StressCollectionPhase = .idle
     @Published var isCollecting = false
     @Published var currentPrediction: StressPrediction?
     @Published var countdown: Int = 25
     @Published var errorMessage: String?
+    @Published var canRetry = false
+    @Published var isDegradedMode = false
+    @Published private(set) var watchWorkoutStarted = true
 
     static let totalSeconds = Int(StressFeatureExtractor.windowDuration)
+    private static let heartRateWaitTimeout: TimeInterval = 15
 
-    /// Seconds elapsed during an active measurement (0…25).
     var elapsedSeconds: Int {
         guard isCollecting else { return 0 }
         return Self.totalSeconds - countdown
@@ -49,8 +64,6 @@ class StressDataCollector: ObservableObject {
         }
     }
 
-    // MARK: - Heart Rate Observer
-
     private func setupHeartRateObserver() {
         heartRateObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("HeartRateUpdated"),
@@ -61,9 +74,8 @@ class StressDataCollector: ObservableObject {
                   let heartRate = notification.userInfo?["heartRate"] as? Double else {
                 return
             }
-
             if self.isCollecting && heartRate > 0 {
-                self.lastKnownHeartRate = heartRate
+                self.recordHeartRate(heartRate, at: Date())
             }
         }
     }
@@ -74,127 +86,207 @@ class StressDataCollector: ObservableObject {
         }
     }
 
-    // MARK: - Session Lifecycle
-
-    /// Resets UI state when opening the measurement screen (does not start workout).
     func prepareForNewSession() {
         stopCollection()
         currentPrediction = nil
         errorMessage = nil
+        canRetry = false
+        isDegradedMode = false
+        collectionPhase = .idle
     }
 
-    /// Cancels workout, discards samples, clears prediction — no inference.
     func cancelCollection() {
         prepareForNewSession()
     }
 
     func startCollection() {
         guard predictor != nil else {
-            errorMessage = "Stress prediction models not loaded"
+            fail(with: "Stress prediction models not loaded", retry: false)
             return
         }
 
-        guard WCSession.default.isReachable else {
-            errorMessage = "Apple Watch not reachable. Please ensure your watch is nearby and the app is open."
+        watchConnector.refreshReadiness()
+        guard watchConnector.readiness.canStartMeasurement else {
+            fail(with: watchConnector.readiness.statusLabel, retry: false)
             return
         }
 
+        collectionTask?.cancel()
+        collectionTask = Task {
+            await runCollectionFlow()
+        }
+    }
+
+    func retryCollection() {
+        errorMessage = nil
+        canRetry = false
+        startCollection()
+    }
+
+    private func runCollectionFlow() async {
+        resetCollectionState()
+        collectionPhase = .connecting
         isCollecting = true
+
+        guard watchConnector.requestStressMeasurementStart() != nil else {
+            fail(with: watchConnector.readiness.statusLabel, retry: false)
+            return
+        }
+
+        let workoutResult = await watchConnector.waitForWorkoutStart(timeout: 10)
+
+        if Task.isCancelled { return }
+
+        switch workoutResult {
+        case .workoutStarted:
+            watchWorkoutStarted = true
+            isDegradedMode = false
+        case .timedOut:
+            let recentRates = await HeartRateWindowSampler.fetchRecentWatchHeartRates(
+                healthStore: healthStore,
+                within: 90
+            )
+            if recentRates.count >= StressFeatureExtractor.minimumSampleCount {
+                watchWorkoutStarted = false
+                isDegradedMode = true
+                watchConnector.stopWorkout()
+            } else {
+                fail(with: WatchMeasurementStartError.workoutStartTimedOut.localizedDescription, retry: true)
+                return
+            }
+        }
+
+        collectionPhase = .waitingForHeartRate
+        startHeartRateWindowSampler()
+
+        let gotHeartRate = await waitForFirstHeartRate(timeout: Self.heartRateWaitTimeout)
+        if Task.isCancelled { return }
+
+        if !gotHeartRate {
+            fail(with: WatchMeasurementStartError.noHeartRateData.localizedDescription, retry: true)
+            return
+        }
+
+        beginMeasuringCountdown()
+    }
+
+    private func resetCollectionState() {
         countdown = Self.totalSeconds
         heartRateBuffer.removeAll()
         errorMessage = nil
         currentPrediction = nil
         lastKnownHeartRate = 0.0
         collectionStartTime = Date()
+        measurementWindowStart = nil
+        canRetry = false
+        isDegradedMode = false
+        watchWorkoutStarted = true
+    }
 
-        watchConnector.startWorkout()
+    private func waitForFirstHeartRate(timeout: TimeInterval) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if !heartRateBuffer.isEmpty || lastKnownHeartRate > 0 {
+                if heartRateBuffer.isEmpty, lastKnownHeartRate > 0 {
+                    recordHeartRate(lastKnownHeartRate, at: Date())
+                }
+                return true
+            }
+            if let bpm = await HeartRateWindowSampler.fetchLatestWatchHeartRate(healthStore: healthStore, within: 15) {
+                recordHeartRate(bpm, at: Date())
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        return !heartRateBuffer.isEmpty
+    }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self else { return }
-            self.startHeartRateSampling()
-            self.startCountdown()
+    private func beginMeasuringCountdown() {
+        measurementWindowStart = Date()
+        heartRateBuffer.removeAll()
+        collectionPhase = .measuring
+        startHeartRateSampling()
+        startCountdown()
+    }
+
+    private func startHeartRateWindowSampler() {
+        let sampler = HeartRateWindowSampler(healthStore: healthStore)
+        heartRateWindowSampler = sampler
+        sampler.start { [weak self] bpm, date in
+            Task { @MainActor in
+                self?.recordHeartRate(bpm, at: date)
+            }
         }
     }
 
-    // MARK: - Heart Rate Sampling
+    private func recordHeartRate(_ bpm: Double, at date: Date) {
+        guard bpm > 0 else { return }
+        lastKnownHeartRate = bpm
+        heartRateBuffer.append((value: bpm, timestamp: date))
+
+        if let windowStart = measurementWindowStart {
+            let windowEnd = windowStart.addingTimeInterval(windowDuration)
+            heartRateBuffer = heartRateBuffer.filter { $0.timestamp >= windowStart && $0.timestamp <= windowEnd }
+        } else {
+            let cutoff = date.addingTimeInterval(-30)
+            heartRateBuffer = heartRateBuffer.filter { $0.timestamp >= cutoff }
+        }
+    }
+
+    /// One BPM per second slot over the 25s measurement window (latest sample wins per bucket).
+    private func downsampleToOneHertz(
+        _ samples: [(value: Double, timestamp: Date)],
+        windowStart: Date
+    ) -> [Double] {
+        let bucketCount = Self.totalSeconds
+        var bucketed: [Int: Double] = [:]
+
+        for sample in samples.sorted(by: { $0.timestamp < $1.timestamp }) {
+            let offset = sample.timestamp.timeIntervalSince(windowStart)
+            guard offset >= 0, offset <= windowDuration else { continue }
+            let bucket = min(Int(offset), bucketCount - 1)
+            bucketed[bucket] = sample.value
+        }
+
+        return (0..<bucketCount).compactMap { bucketed[$0] }
+    }
+
+    private func hrValuesForFeatureWindow() -> [Double] {
+        guard let windowStart = measurementWindowStart else { return [] }
+        let windowEnd = windowStart.addingTimeInterval(windowDuration)
+        let inWindow = heartRateBuffer.filter { $0.timestamp >= windowStart && $0.timestamp <= windowEnd }
+        return downsampleToOneHertz(inWindow, windowStart: windowStart)
+    }
 
     private func startHeartRateSampling() {
         heartRateSamplingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
             Task { @MainActor in
-                guard let self = self, self.isCollecting else {
+                guard let self, self.isCollecting else {
                     timer.invalidate()
                     return
                 }
-
-                await self.sampleHeartRate()
+                await self.pollHeartRate()
             }
         }
     }
 
-    private func sampleHeartRate() async {
-        guard let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
-            return
-        }
-
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let endDate = Date()
-        let startDate = endDate.addingTimeInterval(-5)
-
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictEndDate)
-
-        return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: heartRateType,
-                predicate: predicate,
-                limit: 1,
-                sortDescriptors: [sortDescriptor]
-            ) { [weak self] _, samples, _ in
-                guard let self = self else {
-                    continuation.resume()
-                    return
-                }
-
-                Task { @MainActor in
-                    let currentTime = Date()
-                    var heartRate: Double = self.lastKnownHeartRate
-
-                    if let sample = samples?.first as? HKQuantitySample {
-                        let hrUnit = HKUnit.count().unitDivided(by: .minute())
-                        heartRate = sample.quantity.doubleValue(for: hrUnit)
-                        self.lastKnownHeartRate = heartRate
-                    } else if self.lastKnownHeartRate > 0 {
-                        heartRate = self.lastKnownHeartRate
-                    } else {
-                        heartRate = self.watchConnector.currentHeartRate
-                        if heartRate > 0 {
-                            self.lastKnownHeartRate = heartRate
-                        }
-                    }
-
-                    if heartRate > 0 {
-                        self.heartRateBuffer.append((value: heartRate, timestamp: currentTime))
-                        print("📊 Sampled heart rate: \(heartRate) BPM, total: \(self.heartRateBuffer.count)")
-
-                        let cutoffTime = currentTime.addingTimeInterval(-30)
-                        self.heartRateBuffer = self.heartRateBuffer.filter { $0.timestamp >= cutoffTime }
-                    }
-
-                    continuation.resume()
-                }
-            }
-
-            self.healthStore.execute(query)
+    private func pollHeartRate() async {
+        if let bpm = await HeartRateWindowSampler.fetchLatestWatchHeartRate(healthStore: healthStore, within: 10) {
+            recordHeartRate(bpm, at: Date())
+        } else if watchConnector.currentHeartRate > 0 {
+            recordHeartRate(watchConnector.currentHeartRate, at: Date())
+        } else if lastKnownHeartRate > 0 {
+            recordHeartRate(lastKnownHeartRate, at: Date())
         }
     }
 
     private func startCountdown() {
         predictionTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
-
             Task { @MainActor in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
                 if self.countdown > 0 {
                     self.countdown -= 1
                 } else {
@@ -205,42 +297,56 @@ class StressDataCollector: ObservableObject {
         }
     }
 
+    private func fail(with message: String, retry: Bool) {
+        errorMessage = message
+        canRetry = retry
+        collectionPhase = .failed
+        stopCollection()
+    }
+
     func stopCollection() {
+        collectionTask?.cancel()
+        collectionTask = nil
         isCollecting = false
+        if collectionPhase != .failed {
+            collectionPhase = .idle
+        }
         predictionTimer?.invalidate()
         predictionTimer = nil
         heartRateSamplingTimer?.invalidate()
         heartRateSamplingTimer = nil
+        heartRateWindowSampler?.stop()
+        heartRateWindowSampler = nil
         watchConnector.stopWorkout()
-        heartRateBuffer.removeAll()
         countdown = Self.totalSeconds
-        lastKnownHeartRate = 0.0
-        collectionStartTime = nil
     }
-
-    // MARK: - Prediction
 
     private func performPrediction() async {
         watchConnector.stopWorkout()
+        heartRateWindowSampler?.stop()
+        heartRateWindowSampler = nil
 
-        let cutoffTime = Date().addingTimeInterval(-windowDuration)
-        let recentSamples = heartRateBuffer.filter { $0.timestamp >= cutoffTime }
-        let hrValues = recentSamples.map(\.value)
+        guard let windowStart = measurementWindowStart else {
+            fail(with: "Measurement window not started", retry: true)
+            return
+        }
+
+        let windowEnd = windowStart.addingTimeInterval(windowDuration)
+        let hrValues = hrValuesForFeatureWindow()
 
         guard hrValues.count >= StressFeatureExtractor.minimumSampleCount else {
-            errorMessage = "Not enough heart rate data (need at least \(StressFeatureExtractor.minimumSampleCount) samples, got \(hrValues.count))"
-            stopCollection()
+            fail(
+                with: "Not enough heart rate data (need at least \(StressFeatureExtractor.minimumSampleCount) samples, got \(hrValues.count))",
+                retry: true
+            )
             return
         }
 
         guard let features = StressFeatureExtractor.extract(from: hrValues) else {
-            errorMessage = "Failed to extract HR features"
-            stopCollection()
+            fail(with: "Failed to extract HR features", retry: true)
             return
         }
 
-        let windowEnd = Date()
-        let windowStart = collectionStartTime ?? cutoffTime
         let windowMetrics = await StressMeasurementHealthKitContext.fetchWindowMetrics(
             healthStore: healthStore,
             from: windowStart,
@@ -253,8 +359,7 @@ class StressDataCollector: ObservableObject {
         )
 
         guard let predictor else {
-            errorMessage = "Stress prediction models not available"
-            stopCollection()
+            fail(with: "Stress prediction models not available", retry: false)
             return
         }
 
@@ -270,22 +375,20 @@ class StressDataCollector: ObservableObject {
                 features: features,
                 hrValues: hrValues,
                 hrSampleCount: hrValues.count,
-                measurementStartedAt: collectionStartTime,
+                measurementStartedAt: windowStart,
                 stepsInWindow: windowMetrics.steps,
                 activeEnergyKcal: windowMetrics.activeEnergyKcal,
-                activityType: activityType
+                activityType: activityType,
+                watchWorkoutStarted: watchWorkoutStarted
             )
 
             isCollecting = false
+            collectionPhase = .idle
         } catch {
-            errorMessage = error.localizedDescription
-            print("❌ Prediction error: \(error)")
-            stopCollection()
+            fail(with: error.localizedDescription, retry: true)
         }
     }
 }
-
-// MARK: - Data Models
 
 struct StressPrediction: Equatable {
     let id: UUID = UUID()
@@ -301,6 +404,7 @@ struct StressPrediction: Equatable {
     let stepsInWindow: Int
     let activeEnergyKcal: Double
     let activityType: StressActivityType
+    let watchWorkoutStarted: Bool
 
     var confidenceScore: Double {
         max(ensembleRaw, 1.0 - ensembleRaw)
