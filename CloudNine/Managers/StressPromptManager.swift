@@ -80,21 +80,10 @@ class StressPromptManager: ObservableObject {
         isShowingPrompt = false
     }
 
-    /// User dismissed the rating sheet — still persist model features/outputs for analysis.
+    /// User dismissed the rating sheet — discard the measurement (nothing saved to Firestore).
     func handleUserSkippedRating() {
-        guard let prediction = currentPrediction else {
-            isShowingPrompt = false
-            return
-        }
-
-        saveSample(
-            prediction: prediction,
-            userPrediction: nil,
-            userRatingStatus: .skipped,
-            responseLatencySeconds: nil
-        )
-
         isShowingPrompt = false
+        print("ℹ️ Stress rating skipped — sample not saved")
     }
 
     private func saveSample(

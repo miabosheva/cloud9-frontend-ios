@@ -4,7 +4,7 @@ import Foundation
 enum UserRatingStatus: String, Codable {
     /// User tapped Submit on the rating sheet.
     case submitted = "submitted"
-    /// User tapped Cancel / skipped the rating sheet (model row still saved).
+    /// Legacy value for documents saved before rating was required (no longer written).
     case skipped = "skipped"
 }
 
@@ -37,7 +37,7 @@ struct StressMeasurementSample: Codable, Identifiable {
     var annNormalized: Double
     var confidenceScore: Double
 
-    // User subjective label — nil only when user_rating_status == .skipped
+    // User subjective 1–10 rating (required for new samples)
     var userPrediction: Int?
     var userRatingStatus: UserRatingStatus
 
