@@ -6,6 +6,8 @@ class StressPromptManager: ObservableObject {
     @Published var isShowingDataCollection = false
     @Published var isShowingPrompt = false
     @Published var currentPrediction: StressPrediction?
+    /// Stable id for the rating sheet while a measurement awaits subjective rating.
+    @Published private(set) var pendingRatingID: UUID?
     @Published var isTestFlow = false
     @Published var lastSaveError: String?
     @Published var lastSaveSucceeded: Bool = false
@@ -16,6 +18,7 @@ class StressPromptManager: ObservableObject {
     private let repository = StressMeasurementRepository()
     private var collector: StressDataCollector?
 
+    private var pendingPrediction: StressPrediction?
     private var promptShownAt: Date?
 
     init(watchConnector: WatchConnectivityManager) {
@@ -55,7 +58,8 @@ class StressPromptManager: ObservableObject {
     }
 
     func handleDataCollectionCompleted(prediction: StressPrediction) {
-        currentPrediction = prediction
+        pendingPrediction = prediction
+        pendingRatingID = UUID()
         isShowingDataCollection = false
 
         promptShownAt = Date()
@@ -63,9 +67,9 @@ class StressPromptManager: ObservableObject {
     }
 
     func handleUserResponse(_ value: Int) {
-        guard let prediction = currentPrediction,
+        guard let prediction = pendingPrediction,
               let promptShownAt = promptShownAt else {
-            isShowingPrompt = false
+            clearPendingRating()
             return
         }
 
@@ -77,13 +81,21 @@ class StressPromptManager: ObservableObject {
             responseLatencySeconds: latency
         )
 
-        isShowingPrompt = false
+        currentPrediction = prediction
+        clearPendingRating()
     }
 
     /// User dismissed the rating sheet — discard the measurement (nothing saved to Firestore).
     func handleUserSkippedRating() {
-        isShowingPrompt = false
+        clearPendingRating()
         print("ℹ️ Stress rating skipped — sample not saved")
+    }
+
+    private func clearPendingRating() {
+        pendingPrediction = nil
+        pendingRatingID = nil
+        promptShownAt = nil
+        isShowingPrompt = false
     }
 
     private func saveSample(

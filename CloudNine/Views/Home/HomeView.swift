@@ -119,7 +119,6 @@ struct HomeView: View {
             // User 1–10 prompt sheet
             .sheet(isPresented: $stressPromptManager.isShowingPrompt) {
                 StressPromptView(
-                    initialValue: stressPromptManager.currentPrediction?.stressLevel ?? 5,
                     onSubmit: { value in
                         stressPromptManager.handleUserResponse(value)
                     },
@@ -127,7 +126,7 @@ struct HomeView: View {
                         stressPromptManager.handleUserSkippedRating()
                     }
                 )
-                .id(stressPromptManager.currentPrediction?.timestamp)
+                .id(stressPromptManager.pendingRatingID)
                 .applyPromptSheetStyle()
             }
             .onChange(of: stressPromptManager.lastSaveSucceeded) { _, newValue in

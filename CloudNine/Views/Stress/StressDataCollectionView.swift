@@ -280,29 +280,14 @@ struct StressDataCollectionView: View {
         VStack(spacing: 28) {
             stressIcon(large: false)
 
-            VStack(spacing: 8) {
-                Text("Your Stress Level")
+            VStack(spacing: 12) {
+                Text("Measurement Complete")
                     .font(.title3.weight(.semibold))
+
+                Text("We collected \(prediction.hrSampleCount) heart rate samples. Next, rate how stressed you feel.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-
-                Text("\(prediction.stressLevel)")
-                    .font(.system(size: 72, weight: .bold, design: .rounded))
-                    .foregroundColor(prediction.color)
-
-                Text(prediction.stressCategory)
-                    .font(.headline)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(prediction.color.opacity(0.15)))
-            }
-
-            VStack(spacing: 4) {
-                Text("Population model estimate")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Based on \(prediction.hrSampleCount) heart rate samples")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
             }
         }
     }
@@ -350,7 +335,7 @@ struct StressDataCollectionView: View {
                     dismiss()
                 }
             } label: {
-                Text("Close")
+                Text("Continue")
             }
             .buttonStyle(PrimaryButtonStyle26Adaptive())
 
