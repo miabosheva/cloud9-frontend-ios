@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "measurement_samples",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_test", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

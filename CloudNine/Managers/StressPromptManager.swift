@@ -1,0 +1,159 @@
+import Foundation
+import SwiftUI
+
+@MainActor
+class StressPromptManager: ObservableObject {
+    @Published var isShowingDataCollection = false
+    @Published var isShowingPrompt = false
+    @Published var currentPrediction: StressPrediction?
+    /// Stable id for the rating sheet while a measurement awaits subjective rating.
+    @Published private(set) var pendingRatingID: UUID?
+    @Published var isTestFlow = false
+    @Published var lastSaveError: String?
+    @Published var lastSaveSucceeded: Bool = false
+    @Published private(set) var completedTodayCount: Int
+    let dailyTarget = StressPromptDailyTracker.dailyTarget
+
+    private let watchConnector: WatchConnectivityManager
+    private let repository = StressMeasurementRepository()
+    private var collector: StressDataCollector?
+
+    private var pendingPrediction: StressPrediction?
+    private var promptShownAt: Date?
+
+    init(watchConnector: WatchConnectivityManager) {
+        self.watchConnector = watchConnector
+        self.completedTodayCount = StressPromptDailyTracker.shared.completedTodayCount
+    }
+
+    /// Syncs the local daily counter with Firestore and reconciles notifications.
+    func refreshDailyStateAndReconcile() async {
+        let dayChanged = StressPromptDailyTracker.shared.ensureCurrentDay()
+        var count = StressPromptDailyTracker.shared.completedTodayCount
+
+        if let remoteCount = try? await repository.countNonTestSamples(on: Date()), remoteCount > count {
+            StressPromptDailyTracker.shared.setCompletedCount(remoteCount)
+            count = remoteCount
+        }
+
+        completedTodayCount = count
+        await StressNotificationScheduler.shared.reconcile(completedCount: count)
+
+        if dayChanged {
+            print("📅 New day — reset stress prompt counter and rescheduled notifications")
+        }
+    }
+
+    func beginMeasurement(isTest: Bool) {
+        isTestFlow = isTest
+        currentPrediction = nil
+
+        if collector == nil {
+            collector = StressDataCollector(watchConnector: watchConnector)
+        } else {
+            collector?.prepareForNewSession()
+        }
+
+        isShowingDataCollection = true
+    }
+
+    func handleDataCollectionCompleted(prediction: StressPrediction) {
+        pendingPrediction = prediction
+        pendingRatingID = UUID()
+        isShowingDataCollection = false
+
+        promptShownAt = Date()
+        isShowingPrompt = true
+    }
+
+    func handleUserResponse(_ value: Int) {
+        guard let prediction = pendingPrediction,
+              let promptShownAt = promptShownAt else {
+            clearPendingRating()
+            return
+        }
+
+        let latency = Int(Date().timeIntervalSince(promptShownAt))
+        saveSample(
+            prediction: prediction,
+            userPrediction: value,
+            userRatingStatus: .submitted,
+            responseLatencySeconds: latency
+        )
+
+        currentPrediction = prediction
+        clearPendingRating()
+    }
+
+    /// User dismissed the rating sheet — discard the measurement (nothing saved to Firestore).
+    func handleUserSkippedRating() {
+        clearPendingRating()
+        print("ℹ️ Stress rating skipped — sample not saved")
+    }
+
+    private func clearPendingRating() {
+        pendingPrediction = nil
+        pendingRatingID = nil
+        promptShownAt = nil
+        isShowingPrompt = false
+    }
+
+    private func saveSample(
+        prediction: StressPrediction,
+        userPrediction: Int?,
+        userRatingStatus: UserRatingStatus,
+        responseLatencySeconds: Int?
+    ) {
+        let sample = StressMeasurementSample(
+            timestamp: prediction.timestamp,
+            measurementStartedAt: prediction.measurementStartedAt,
+            hrValues: prediction.hrValues,
+            features: prediction.features,
+            hrSampleCount: prediction.hrSampleCount,
+            stepsInWindow: prediction.stepsInWindow,
+            activeEnergyKcal: prediction.activeEnergyKcal,
+            modelPrediction: prediction.stressLevel,
+            ensembleRaw: prediction.ensembleRaw,
+            xgbProbability: prediction.xgbProbability,
+            annNormalized: prediction.annNormalized,
+            confidenceScore: prediction.confidenceScore,
+            userPrediction: userPrediction,
+            userRatingStatus: userRatingStatus,
+            responseLatencySeconds: responseLatencySeconds,
+            activityType: prediction.activityType,
+            isTest: isTestFlow,
+            watchWorkoutStarted: prediction.watchWorkoutStarted
+        )
+
+        if !isTestFlow {
+            StressPromptDailyTracker.shared.recordCompletion()
+            completedTodayCount = StressPromptDailyTracker.shared.completedTodayCount
+        }
+
+        Task {
+            do {
+                try await repository.save(sample)
+                lastSaveSucceeded = true
+                lastSaveError = nil
+                let label = userPrediction.map(String.init) ?? "none"
+                print("✅ Saved stress sample (\(userRatingStatus.rawValue)), rating=\(label)")
+                if !isTestFlow {
+                    await StressNotificationScheduler.shared.reconcile(completedCount: completedTodayCount)
+                }
+            } catch {
+                lastSaveSucceeded = false
+                lastSaveError = error.localizedDescription
+                print("❌ Failed to save stress measurement sample: \(error)")
+            }
+        }
+    }
+
+    func makeCollector() -> StressDataCollector {
+        if let collector {
+            return collector
+        }
+        let newCollector = StressDataCollector(watchConnector: watchConnector)
+        collector = newCollector
+        return newCollector
+    }
+}

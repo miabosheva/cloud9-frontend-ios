@@ -2,10 +2,19 @@ import SwiftUI
 import HealthKit
 
 struct MainTabView: View {
-    
+    @Environment(\.scenePhase) private var scenePhase
     @State private var healthManager = HealthManager()
-    @State private var watchConnector = WatchConnectivityManager()
-    
+    @State private var watchConnector: WatchConnectivityManager
+    @StateObject private var stressPromptManager: StressPromptManager
+    @EnvironmentObject private var authManager: AuthManager
+    @StateObject private var notificationHandler = NotificationHandler.shared
+
+    init() {
+        let connector = WatchConnectivityManager()
+        _watchConnector = State(initialValue: connector)
+        _stressPromptManager = StateObject(wrappedValue: StressPromptManager(watchConnector: connector))
+    }
+
     var body: some View {
         Group {
             switch healthManager.authorizationStatus {
@@ -14,7 +23,7 @@ struct MainTabView: View {
                     .task {
                         await healthManager.requestPermissions()
                     }
-                
+
             case .denied:
                 VStack(spacing: 16) {
                     Image(systemName: "lock.fill")
@@ -32,21 +41,55 @@ struct MainTabView: View {
                     }
                 }
                 .padding()
-                
+
             case .granted:
-                TabView {
-                    HomeView(watchConnector: watchConnector)
-                        .tabItem {
-                            Label("Home", systemImage: "house.fill")
+                Group {
+                    if #available(iOS 26, *) {
+                        TabView {
+                            HomeView(watchConnector: watchConnector)
+                                .tabItem {
+                                    Label("Home", systemImage: "house.fill")
+                                }
+
+                            SleepSummaryTabs()
+                                .tabItem {
+                                    Label("Sleep Log", systemImage: "moon.stars.fill")
+                                }
                         }
-                    
-                    SleepSummaryTabs()
-                        .tabItem {
-                            Label("Sleep Log", systemImage: "moon.stars.fill")
+                        .tint(.accentColor)
+                    } else {
+                        TabView {
+                            HomeView(watchConnector: watchConnector)
+                                .tabItem {
+                                    Label("Home", systemImage: "house.fill")
+                                }
+
+                            SleepSummaryTabs()
+                                .tabItem {
+                                    Label("Sleep Log", systemImage: "moon.stars.fill")
+                                }
                         }
+                    }
                 }
                 .handleGlobalErrors()
                 .environment(healthManager)
+                .environmentObject(stressPromptManager)
+                .task {
+                    await stressPromptManager.refreshDailyStateAndReconcile()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        Task {
+                            await stressPromptManager.refreshDailyStateAndReconcile()
+                        }
+                    }
+                }
+                .onChange(of: notificationHandler.didTapStressPrompt) { _, newValue in
+                    if newValue {
+                        stressPromptManager.beginMeasurement(isTest: false)
+                        notificationHandler.didTapStressPrompt = false
+                    }
+                }
             }
         }
     }

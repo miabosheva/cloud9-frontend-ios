@@ -100,6 +100,10 @@ Desktop.ini
 # .vscode/
 # .idea/
 
+# Project docs (local research notes, not for version control)
+docs/
+ml/
+
 # Other common ignores
 #
 # Files that are typically generated or are not part of the source code.

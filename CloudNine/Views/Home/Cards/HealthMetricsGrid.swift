@@ -49,4 +49,5 @@ struct HealthMetricsGrid: View {
         showingInfoAlert: .constant(false)
     )
     .environment(HealthManager())
+    .environmentObject(StressPromptManager(watchConnector: WatchConnectivityManager()))
 }

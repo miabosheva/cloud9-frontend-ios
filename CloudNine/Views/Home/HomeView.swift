@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(HealthManager.self) var healthManager
     @Environment(ErrorManager.self) var errorManager
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var stressPromptManager: StressPromptManager
     @State var navigationManager = NavigationManager()
     @State var viewModel = HomeViewModel()
     @Bindable var watchConnector: WatchConnectivityManager
@@ -17,6 +18,9 @@ struct HomeView: View {
     @State private var showingSleepDebtDetails = false
     @State private var userInfo = UserInfo()
     @State var showingInfoAlert: Bool = false
+    @State private var isShowingSaveResultAlert: Bool = false
+    @State private var saveResultTitle: String = ""
+    @State private var saveResultMessage: String = ""
     
     private var userManager = UserManager()
     
@@ -33,6 +37,9 @@ struct HomeView: View {
                             userInfo: userInfo,
                             onProfileTap: { navigationManager.navigate(to: .profile) }
                         )
+
+                        StressPredictionCard()
+                            .padding(.horizontal)
                         
                         HealthMetricsGrid(
                             watchConnector: watchConnector,
@@ -61,6 +68,16 @@ struct HomeView: View {
                             stepsFilter: $stepsFilter
                         )
                         .padding(.horizontal)
+
+#if DEBUG
+                        Button {
+                            stressPromptManager.beginMeasurement(isTest: true)
+                        } label: {
+                            Text("Trigger Stress Prompt (Test)")
+                        }
+                        .buttonStyle(SecondaryButtonStyle26Adaptive())
+                        .padding(.horizontal)
+#endif
                     }
                     .padding(.bottom, 30)
                 }
@@ -82,8 +99,47 @@ struct HomeView: View {
             } message: {
                 Text("To begin a measurement, please open the app on your Apple Watch.")
             }
+            .alert(saveResultTitle, isPresented: $isShowingSaveResultAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(saveResultMessage)
+            }
             .sheet(isPresented: $showingSleepDebtDetails) {
                 SleepDebtDetailView(sleepDebtResult: healthManager.sleepDebtResult)
+            }
+            // Full-screen stress measurement flow
+            .fullScreenCover(isPresented: $stressPromptManager.isShowingDataCollection) {
+                StressDataCollectionView(
+                    collector: stressPromptManager.makeCollector(),
+                    isTest: stressPromptManager.isTestFlow
+                ) { prediction in
+                    stressPromptManager.handleDataCollectionCompleted(prediction: prediction)
+                }
+            }
+            // User 1–10 prompt sheet
+            .sheet(isPresented: $stressPromptManager.isShowingPrompt) {
+                StressPromptView(
+                    onSubmit: { value in
+                        stressPromptManager.handleUserResponse(value)
+                    },
+                    onSkip: {
+                        stressPromptManager.handleUserSkippedRating()
+                    }
+                )
+                .id(stressPromptManager.pendingRatingID)
+                .applyPromptSheetStyle()
+            }
+            .onChange(of: stressPromptManager.lastSaveSucceeded) { _, newValue in
+                guard newValue else { return }
+                saveResultTitle = "Saved"
+                saveResultMessage = "Thank you! Your stress rating was saved successfully."
+                isShowingSaveResultAlert = true
+            }
+            .onChange(of: stressPromptManager.lastSaveError) { _, errorText in
+                guard let errorText, !errorText.isEmpty else { return }
+                saveResultTitle = "Save Failed"
+                saveResultMessage = "Your stress rating could not be saved.\n\n\(errorText)"
+                isShowingSaveResultAlert = true
             }
             .task {
                 await fetchData()
@@ -169,4 +225,5 @@ struct HomeView: View {
     HomeView(watchConnector: WatchConnectivityManager())
         .environment(HealthManager())
         .environment(ErrorManager())
+        .environmentObject(StressPromptManager(watchConnector: WatchConnectivityManager()))
 }

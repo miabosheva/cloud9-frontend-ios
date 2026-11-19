@@ -1,0 +1,5 @@
+{
+  "ann_output_min": 0.09822550415992737,
+  "ann_output_max": 1.312719702720642,
+  "note": "Apply after ANN forward pass: ann_norm = clip((raw - min) / (max - min), 0, 1)"
+}
